@@ -122,17 +122,17 @@ def render_home_page(data_manager: DataManager):
 
         To track details of who rang what tonight:
 
-        1. ** Add a new Practice **
+        1. **Add a new Practice**
            - Navigate to the Practices page
            - Add a new practice and make sure the date is correct
            - You will only need to do this once per practice
 
-        2. ** Add a new Touch **
+        2. **Add a new Touch**
            - Navigate to the Touches page
            - Create a new touch
            - Fill in the touch and ringers
         
-        - ** If you have issues **
+        - **If you have issues**
            - If you are missing a ringer, you need to add them in the "Ringers" page.
            - If you are missing a method, you need to add it in the "Methods" page.
            - Use the edit (✏️) and delete (🗑️) buttons to manage your data
@@ -142,7 +142,7 @@ def render_home_page(data_manager: DataManager):
     st.markdown("### Recent Activity")
     
     if not employees and not practices and not touches:
-        st.info("👋 No data yet! Start by adding employees, then create practices and touches.")
+        st.info("👋 No data yet! Start by adding ringers, then create practices and touches.")
     else:
         # Show recent practices
         if practices:
