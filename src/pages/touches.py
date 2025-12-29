@@ -169,9 +169,6 @@ def render_touch_form(data_manager: DataManager):
                 label_visibility="collapsed"
             )
         
-        with col2:
-            pass
-        
         # If "Add New Method" is selected, show text input
         method_name = ""
         if selected_method_option == "➕ Add New Method":

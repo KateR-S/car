@@ -35,7 +35,7 @@ def render_practice_list(data_manager: DataManager):
     # Sort practices by date (most recent first)
     try:
         practices.sort(key=lambda p: datetime.strptime(p.date, "%d-%m-%Y"), reverse=True)
-    except:
+    except (ValueError, AttributeError):
         pass  # If date parsing fails, keep original order
     
     # Display practices
@@ -90,7 +90,7 @@ def render_practice_form(data_manager: DataManager):
             if editing_practice:
                 try:
                     default_date = datetime.strptime(editing_practice.date, "%d-%m-%Y")
-                except:
+                except (ValueError, AttributeError):
                     default_date = datetime.now()
             else:
                 default_date = datetime.now()

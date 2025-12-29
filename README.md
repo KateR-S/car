@@ -27,6 +27,15 @@ streamlit run app.py
 
 Default password: `admin123` (can be changed in `config.py`)
 
+## Security Note
+
+⚠️ **Important**: This application is designed for local/internal use with a single shared password. For production deployment:
+- Remove the password display from the login page
+- Consider using environment variables for the password
+- Implement proper user authentication with individual accounts
+- Use HTTPS for secure communication
+- Consider adding rate limiting for login attempts
+
 ## Project Structure
 
 ```
