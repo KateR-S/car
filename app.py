@@ -108,8 +108,9 @@ def render_home_page(data_manager: DataManager):
         st.markdown("### 🎯 Touches")
         st.metric("Total", len(touches))
         if touches:
-            methods = set(t.method for t in touches)
-            st.caption(f"Unique methods: {len(methods)}")
+            # Get unique method IDs and count them
+            method_ids = set(t.method_id for t in touches if t.method_id)
+            st.caption(f"Unique methods: {len(method_ids)}")
     
     st.markdown("---")
     
@@ -168,13 +169,20 @@ def render_home_page(data_manager: DataManager):
         # Show method usage
         if touches:
             st.markdown("#### Popular Methods")
+            # Get all methods
+            all_methods = {m.id: m for m in data_manager.get_methods()}
             method_counts = {}
             for t in touches:
-                method_counts[t.method] = method_counts.get(t.method, 0) + 1
+                if t.method_id and t.method_id in all_methods:
+                    method_name = all_methods[t.method_id].name
+                    method_counts[method_name] = method_counts.get(method_name, 0) + 1
             
-            sorted_methods = sorted(method_counts.items(), key=lambda x: x[1], reverse=True)[:5]
-            for method, count in sorted_methods:
-                st.markdown(f"- **{method}**: {count} time(s)")
+            if method_counts:
+                sorted_methods = sorted(method_counts.items(), key=lambda x: x[1], reverse=True)[:5]
+                for method, count in sorted_methods:
+                    st.markdown(f"- **{method}**: {count} time(s)")
+            else:
+                st.caption("No methods assigned yet")
 
 
 if __name__ == "__main__":
