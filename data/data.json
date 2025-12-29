@@ -6,15 +6,70 @@
       "last_name": "Smith",
       "member": true,
       "resident": "Local"
+    },
+    {
+      "id": "ffc7a9c0-2af2-41d3-9bac-e9a07bc20147",
+      "first_name": "Jane",
+      "last_name": "Doe",
+      "member": true,
+      "resident": "Local"
+    },
+    {
+      "id": "9d6cef67-84c0-40a6-9bd0-710656b3d58b",
+      "first_name": "Here",
+      "last_name": "Student",
+      "member": true,
+      "resident": "Term-time Only"
+    },
+    {
+      "id": "48df557f-ad80-4b02-b752-b77bb7554abf",
+      "first_name": "Away",
+      "last_name": "Student",
+      "member": true,
+      "resident": "Vacation Only"
+    },
+    {
+      "id": "5eee824d-03f5-40f7-b760-eb414c100e56",
+      "first_name": "Prospective",
+      "last_name": "Member",
+      "member": false,
+      "resident": "Local"
     }
   ],
-  "practices": [],
-  "touches": [],
+  "practices": [
+    {
+      "id": "b5b24bb6-a958-471f-97e8-b0faeeb22c56",
+      "date": "29-12-2025",
+      "location": "Withycombe Raleigh"
+    }
+  ],
+  "touches": [
+    {
+      "id": "fa82294e-5354-484c-bbf0-bdc9ff6481e1",
+      "practice_id": "b5b24bb6-a958-471f-97e8-b0faeeb22c56",
+      "method_id": "79d73784-a08a-4752-877b-56b313824cd5",
+      "conductor_id": "ffc7a9c0-2af2-41d3-9bac-e9a07bc20147",
+      "bells": [
+        "ffc7a9c0-2af2-41d3-9bac-e9a07bc20147",
+        "66619add-2367-4307-98db-5649075fec92",
+        "9d6cef67-84c0-40a6-9bd0-710656b3d58b",
+        "48df557f-ad80-4b02-b752-b77bb7554abf",
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ]
+    }
+  ],
   "methods": [
     {
-      "id": "2bd1a473-2286-4e4a-9443-4f852b0fa18f",
-      "name": "Team Building Workshop",
-      "code": "TBW-001"
+      "id": "79d73784-a08a-4752-877b-56b313824cd5",
+      "name": "Cambridge Surprise Maximus",
+      "code": "C12"
     }
   ]
 }

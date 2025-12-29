@@ -9,12 +9,12 @@ import config
 
 def render_employees_page(data_manager: DataManager):
     """Render the employees management page."""
-    st.title("👥 Employee Management")
+    st.title("Ringer Management")
     
     # Add employee button in popover
     col1, col2, col3 = st.columns([1, 1, 4])
     with col1:
-        with st.popover("➕ Add Employee", use_container_width=True):
+        with st.popover("➕ Add Ringer", use_container_width=True):
             render_employee_form(data_manager, None)
     
     # Display employee list
@@ -22,14 +22,14 @@ def render_employees_page(data_manager: DataManager):
 
 
 def render_employee_list(data_manager: DataManager):
-    """Render list of employees with edit/delete options."""
+    """Render list of ringers with edit/delete options."""
     employees = data_manager.get_employees()
     
     if not employees:
-        st.info("No employees found. Click 'Add Employee' above to add your first employee.")
+        st.info("No ringers found. Click 'Add Ringer' above to add your first ringer.")
         return
     
-    st.subheader(f"Total Employees: {len(employees)}")
+    st.subheader(f"Total Ringers: {len(employees)}")
     
     # Display employees in a table-like format
     for emp in employees:
@@ -56,16 +56,16 @@ def render_employee_list(data_manager: DataManager):
 
 
 def render_employee_form(data_manager: DataManager, editing_employee: Employee = None):
-    """Render form to add or edit an employee.
+    """Render form to add or edit a ringer.
     
     Args:
         data_manager: The data manager instance
-        editing_employee: Employee object if editing, None if adding new
+        editing_employee: Ringer object if editing, None if adding new
     """
     if editing_employee:
-        st.subheader("✏️ Edit Employee")
+        st.subheader("✏️ Edit Ringer")
     else:
-        st.subheader("➕ Add New Employee")
+        st.subheader("➕ Add New Ringer")
     
     # Generate unique form key
     form_key = f"employee_form_{editing_employee.id if editing_employee else 'new'}"
@@ -98,7 +98,7 @@ def render_employee_form(data_manager: DataManager, editing_employee: Employee =
         )
         
         submit = st.form_submit_button(
-            "Update Employee" if editing_employee else "Add Employee",
+            "Update Ringer" if editing_employee else "Add Ringer",
             type="primary",
             use_container_width=True
         )

@@ -6,15 +6,15 @@ import os
 DEFAULT_PASSWORD = "admin123"
 
 # Enums
-RESIDENT_TYPES = ["Local", "Regional", "National", "International"]
-LOCATIONS = ["Office A", "Office B", "Office C", "Remote"]
+RESIDENT_TYPES = ["Local", "Term-time Only", "Vacation Only"]
+LOCATIONS = ["Withycombe Raleigh", "Cathedral"]
 
 # Data file path
 DATA_FILE = "data/data.json"
 
 # Touch settings
 MAX_BELLS = 12
-MAX_TOUCHES_PER_PRACTICE = 8
+MAX_TOUCHES_PER_PRACTICE = 12
 
 # Database backend: 'json' or 'neon'
 # Set USE_NEON=true environment variable to use Neon database
