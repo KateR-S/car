@@ -6,6 +6,7 @@ from src.data_manager import DataManager
 from src.pages.employees import render_employees_page
 from src.pages.practices import render_practices_page
 from src.pages.touches import render_touches_page
+from src.pages.methods import render_methods_page
 
 
 # Page configuration
@@ -35,7 +36,7 @@ def main():
         # Navigation menu
         page = st.radio(
             "Navigation",
-            ["🏠 Home", "👥 Employees", "📅 Practices", "🎯 Touches"],
+            ["🏠 Home", "👥 Employees", "📅 Practices", "🎯 Touches", "📚 Methods"],
             key="navigation"
         )
         
@@ -69,6 +70,8 @@ def main():
         render_practices_page(data_manager)
     elif page == "🎯 Touches":
         render_touches_page(data_manager)
+    elif page == "📚 Methods":
+        render_methods_page(data_manager)
 
 
 def render_home_page(data_manager: DataManager):

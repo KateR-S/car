@@ -3,7 +3,7 @@
 import json
 import os
 from typing import Dict, List, Optional
-from src.models import Employee, Practice, Touch
+from src.models import Employee, Practice, Touch, Method
 import config
 
 
@@ -23,7 +23,7 @@ class DataManager:
                 "employees": [],
                 "practices": [],
                 "touches": [],
-                "methods": []  # List of workshop method names
+                "methods": []  # List of Method objects
             })
     
     def _load_data(self) -> Dict:
@@ -155,23 +155,39 @@ class DataManager:
         return None
     
     # Method methods
-    def get_methods(self) -> List[str]:
+    def get_methods(self) -> List[Method]:
         """Get all workshop methods."""
         data = self._load_data()
-        return data.get("methods", [])
+        return [Method(**method) for method in data.get("methods", [])]
     
-    def add_method(self, method: str):
+    def add_method(self, method: Method):
         """Add a new method."""
         data = self._load_data()
         if "methods" not in data:
             data["methods"] = []
-        if method and method not in data["methods"]:
-            data["methods"].append(method)
-            self._save_data(data)
+        data["methods"].append(method.to_dict())
+        self._save_data(data)
     
-    def delete_method(self, method: str):
+    def update_method(self, method_id: str, method: Method):
+        """Update an existing method."""
+        data = self._load_data()
+        for i, mth in enumerate(data["methods"]):
+            if mth["id"] == method_id:
+                data["methods"][i] = method.to_dict()
+                break
+        self._save_data(data)
+    
+    def delete_method(self, method_id: str):
         """Delete a method."""
         data = self._load_data()
-        if "methods" in data and method in data["methods"]:
-            data["methods"].remove(method)
+        if "methods" in data:
+            data["methods"] = [m for m in data["methods"] if m["id"] != method_id]
             self._save_data(data)
+    
+    def get_method_by_id(self, method_id: str) -> Optional[Method]:
+        """Get method by ID."""
+        methods = self.get_methods()
+        for method in methods:
+            if method.id == method_id:
+                return method
+        return None

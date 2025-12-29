@@ -12,14 +12,14 @@ def render_practices_page(data_manager: DataManager):
     """Render the practices management page."""
     st.title("📅 Practice Management")
     
-    # Tabs for different actions
-    tab1, tab2 = st.tabs(["📋 View Practices", "➕ Add/Edit Practice"])
+    # Add practice button in popover
+    col1, col2, col3 = st.columns([1, 1, 4])
+    with col1:
+        with st.popover("➕ Add Practice", use_container_width=True):
+            render_practice_form(data_manager, None)
     
-    with tab1:
-        render_practice_list(data_manager)
-    
-    with tab2:
-        render_practice_form(data_manager)
+    # Display practice list
+    render_practice_list(data_manager)
 
 
 def render_practice_list(data_manager: DataManager):
@@ -27,7 +27,7 @@ def render_practice_list(data_manager: DataManager):
     practices = data_manager.get_practices()
     
     if not practices:
-        st.info("No practices found. Add your first practice using the 'Add/Edit Practice' tab.")
+        st.info("No practices found. Click 'Add Practice' above to add your first practice.")
         return
     
     st.subheader(f"Total Practices: {len(practices)}")
@@ -52,9 +52,9 @@ def render_practice_list(data_manager: DataManager):
                 st.caption(f"🎯 {len(touches)} touch(es)")
             
             with col2:
-                if st.button("✏️ Edit", key=f"edit_practice_{practice.id}"):
-                    st.session_state.editing_practice = practice.id
-                    st.rerun()
+                # Edit button in popover
+                with st.popover("✏️ Edit", use_container_width=True):
+                    render_practice_form(data_manager, practice)
             
             with col3:
                 if st.button("🗑️ Delete", key=f"delete_practice_{practice.id}"):
@@ -69,60 +69,50 @@ def render_practice_list(data_manager: DataManager):
             st.divider()
 
 
-def render_practice_form(data_manager: DataManager):
-    """Render form to add or edit a practice."""
-    # Check if editing
-    editing_id = st.session_state.get("editing_practice", None)
-    editing_practice = None
+def render_practice_form(data_manager: DataManager, editing_practice: Practice = None):
+    """Render form to add or edit a practice.
     
-    if editing_id:
-        editing_practice = data_manager.get_practice_by_id(editing_id)
+    Args:
+        data_manager: The data manager instance
+        editing_practice: Practice object if editing, None if adding new
+    """
+    if editing_practice:
         st.subheader("✏️ Edit Practice")
     else:
         st.subheader("➕ Add New Practice")
     
+    # Generate unique form key
+    form_key = f"practice_form_{editing_practice.id if editing_practice else 'new'}"
+    
     # Form
-    with st.form("practice_form", clear_on_submit=True):
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            # Date input
-            if editing_practice:
-                try:
-                    default_date = datetime.strptime(editing_practice.date, "%d-%m-%Y")
-                except (ValueError, AttributeError):
-                    default_date = datetime.now()
-            else:
+    with st.form(form_key, clear_on_submit=True):
+        # Date input
+        if editing_practice:
+            try:
+                default_date = datetime.strptime(editing_practice.date, "%d-%m-%Y")
+            except (ValueError, AttributeError):
                 default_date = datetime.now()
-            
-            date_input = st.date_input(
-                "Date *",
-                value=default_date,
-                key="practice_date"
-            )
+        else:
+            default_date = datetime.now()
         
-        with col2:
-            location = st.selectbox(
-                "Location *",
-                options=config.LOCATIONS,
-                index=config.LOCATIONS.index(editing_practice.location) if editing_practice else 0,
-                key="practice_location"
-            )
+        date_input = st.date_input(
+            "Date *",
+            value=default_date,
+            key=f"practice_date_{editing_practice.id if editing_practice else 'new'}"
+        )
         
-        col3, col4, col5 = st.columns([1, 1, 2])
+        location = st.selectbox(
+            "Location *",
+            options=config.LOCATIONS,
+            index=config.LOCATIONS.index(editing_practice.location) if editing_practice else 0,
+            key=f"practice_location_{editing_practice.id if editing_practice else 'new'}"
+        )
         
-        with col3:
-            submit = st.form_submit_button(
-                "Update Practice" if editing_practice else "Add Practice",
-                type="primary"
-            )
-        
-        with col4:
-            if editing_practice:
-                cancel = st.form_submit_button("Cancel")
-                if cancel:
-                    st.session_state.editing_practice = None
-                    st.rerun()
+        submit = st.form_submit_button(
+            "Update Practice" if editing_practice else "Add Practice",
+            type="primary",
+            use_container_width=True
+        )
         
         if submit:
             # Format date as DD-MM-YYYY
@@ -137,7 +127,6 @@ def render_practice_form(data_manager: DataManager):
                 )
                 data_manager.update_practice(editing_practice.id, updated_practice)
                 st.success(f"Updated practice on {formatted_date}")
-                st.session_state.editing_practice = None
             else:
                 # Add new practice
                 new_practice = Practice(

@@ -36,11 +36,23 @@ class Practice:
 
 
 @dataclass
+class Method:
+    """Method (workshop type) model."""
+    id: str
+    name: str
+    code: str
+    
+    def to_dict(self):
+        """Convert to dictionary."""
+        return asdict(self)
+
+
+@dataclass
 class Touch:
     """Touch (workshop) model."""
     id: str
     practice_id: str
-    method: str  # Workshop name
+    method_id: str  # Method ID (was method name)
     conductor_id: Optional[str] = None  # Employee ID
     bells: List[Optional[str]] = field(default_factory=lambda: [None] * 12)  # Employee IDs for each bell
     
