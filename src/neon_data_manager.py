@@ -32,7 +32,7 @@ class NeonDataManager:
             )
         
         # Build connection string (credentials are not logged)
-        return f"postgresql://{db_role}:{db_pass}@{db_name}.eu-west-2.aws.neon.tech/{db_database}?sslmode=require"
+        return f"postgresql://{db_role}:{db_pass}@{db_name}.eu-west-2.aws.neon.tech/{db_database}?sslmode=require&channel_binding=require"
     
     def _get_connection(self):
         """Get a database connection."""
