@@ -2,7 +2,7 @@
 
 import os
 import psycopg2
-from psycopg2.extras import RealDictCursor
+from psycopg2.extras import RealDictCursor, Json
 from typing import Dict, List, Optional
 from src.models import Employee, Practice, Touch, Method
 
@@ -35,8 +35,14 @@ class NeonDataManager:
         return f"postgresql://{db_role}:{db_pass}@{db_name}.eu-west-2.aws.neon.tech/{db_database}?sslmode=require&channel_binding=require"
     
     def _get_connection(self):
-        """Get a database connection."""
-        return psycopg2.connect(self.connection_string)
+        """Get a database connection with error handling."""
+        try:
+            return psycopg2.connect(self.connection_string)
+        except psycopg2.OperationalError as e:
+            raise ConnectionError(
+                f"Failed to connect to Neon database. Please verify your credentials and network connection. "
+                f"Error: {str(e)}"
+            )
     
     def _ensure_tables(self):
         """Create database tables if they don't exist."""
@@ -80,7 +86,9 @@ class NeonDataManager:
                         method_id VARCHAR(255) NOT NULL,
                         conductor_id VARCHAR(255),
                         bells JSONB NOT NULL,
-                        FOREIGN KEY (practice_id) REFERENCES practices(id) ON DELETE CASCADE
+                        FOREIGN KEY (practice_id) REFERENCES practices(id) ON DELETE CASCADE,
+                        FOREIGN KEY (method_id) REFERENCES methods(id),
+                        FOREIGN KEY (conductor_id) REFERENCES employees(id)
                     )
                 """)
                 
@@ -229,7 +237,7 @@ class NeonDataManager:
             with conn.cursor() as cur:
                 cur.execute(
                     "INSERT INTO touches (id, practice_id, method_id, conductor_id, bells) VALUES (%s, %s, %s, %s, %s::jsonb)",
-                    (touch.id, touch.practice_id, touch.method_id, touch.conductor_id, psycopg2.extras.Json(touch.bells))
+                    (touch.id, touch.practice_id, touch.method_id, touch.conductor_id, Json(touch.bells))
                 )
             conn.commit()
         finally:
@@ -242,7 +250,7 @@ class NeonDataManager:
             with conn.cursor() as cur:
                 cur.execute(
                     "UPDATE touches SET practice_id=%s, method_id=%s, conductor_id=%s, bells=%s::jsonb WHERE id=%s",
-                    (touch.practice_id, touch.method_id, touch.conductor_id, psycopg2.extras.Json(touch.bells), touch_id)
+                    (touch.practice_id, touch.method_id, touch.conductor_id, Json(touch.bells), touch_id)
                 )
             conn.commit()
         finally:
