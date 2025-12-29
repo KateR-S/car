@@ -86,19 +86,17 @@ def render_practice_form(data_manager: DataManager, editing_practice: Practice =
     
     # Form
     with st.form(form_key, clear_on_submit=True):
-        # Date input
+        # Date input as text field
         if editing_practice:
-            try:
-                default_date = datetime.strptime(editing_practice.date, "%d-%m-%Y")
-            except (ValueError, AttributeError):
-                default_date = datetime.now()
+            default_date_str = editing_practice.date
         else:
-            default_date = datetime.now()
+            default_date_str = datetime.now().strftime("%d-%m-%Y")
         
-        date_input = st.date_input(
-            "Date *",
-            value=default_date,
-            key=f"practice_date_{editing_practice.id if editing_practice else 'new'}"
+        date_text = st.text_input(
+            "Date (DD-MM-YYYY) *",
+            value=default_date_str,
+            key=f"practice_date_{editing_practice.id if editing_practice else 'new'}",
+            help="Enter date in DD-MM-YYYY format"
         )
         
         location = st.selectbox(
@@ -115,8 +113,14 @@ def render_practice_form(data_manager: DataManager, editing_practice: Practice =
         )
         
         if submit:
-            # Format date as DD-MM-YYYY
-            formatted_date = date_input.strftime("%d-%m-%Y")
+            # Validate date format
+            try:
+                # Parse to validate format
+                parsed_date = datetime.strptime(date_text.strip(), "%d-%m-%Y")
+                formatted_date = parsed_date.strftime("%d-%m-%Y")
+            except ValueError:
+                st.error("Invalid date format. Please use DD-MM-YYYY format (e.g., 29-12-2025)")
+                return
             
             if editing_practice:
                 # Update existing practice

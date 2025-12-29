@@ -204,7 +204,7 @@ def render_touch_form(data_manager: DataManager, editing_touch: Touch = None):
         st.caption("Assign employees to each bell slot")
         
         bell_assignments = []
-        cols_per_row = 3
+        cols_per_row = 2  # Changed from 3 to 2 for wider dropdowns
         for i in range(12):
             if i % cols_per_row == 0:
                 cols = st.columns(cols_per_row)
