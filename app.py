@@ -2,7 +2,7 @@
 
 import streamlit as st
 from src.auth import check_password, logout
-from src.data_manager import DataManager
+from src.data_manager import get_data_manager
 from src.pages.employees import render_employees_page
 from src.pages.practices import render_practices_page
 from src.pages.touches import render_touches_page
@@ -25,8 +25,8 @@ def main():
     if not check_password():
         return
     
-    # Initialize data manager
-    data_manager = DataManager()
+    # Initialize data manager (will use Neon if configured)
+    data_manager = get_data_manager()
     
     # Sidebar navigation
     with st.sidebar:
@@ -74,7 +74,7 @@ def main():
         render_methods_page(data_manager)
 
 
-def render_home_page(data_manager: DataManager):
+def render_home_page(data_manager):
     """Render the home/dashboard page."""
     st.title("🏠 Attendance Tracking Dashboard")
     st.markdown("Welcome to the Attendance Tracking App!")

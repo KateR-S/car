@@ -8,7 +8,8 @@ A Streamlit application for tracking employee attendance at practices (all-hands
 - **Practice Management**: Schedule and manage practices with dates and locations
 - **Touch Management**: Organize workshops with up to 12 bells (participant slots) and a conductor
 - **Password Protection**: Single-user authentication to protect data
-- **Data Persistence**: All data is saved locally and persists across sessions
+- **Data Persistence**: All data is saved locally via JSON or remotely via Neon PostgreSQL database
+- **Flexible Storage**: Choose between local JSON storage or cloud-based Neon database
 
 ## Installation
 
@@ -26,6 +27,23 @@ streamlit run app.py
 ```
 
 Default password: `admin123` (can be changed in `config.py`)
+
+### Using Neon Database (Optional)
+
+By default, the application uses local JSON file storage. To use Neon PostgreSQL database instead:
+
+1. Set up a Neon database at [https://neon.tech/](https://neon.tech/)
+2. Set the following environment variables:
+   ```bash
+   export USE_NEON=true
+   export DB_ROLE=your_db_role
+   export DB_PASS=your_db_password
+   export DB_NAME=your_db_name
+   export DB_DATABASE=your_database_name
+   ```
+3. Run the application - it will automatically create the necessary tables on first run
+
+**Security Note**: The database credentials are never logged or stored in the application code.
 
 ## Security Note
 

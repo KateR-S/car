@@ -191,3 +191,17 @@ class DataManager:
             if method.id == method_id:
                 return method
         return None
+
+
+def get_data_manager():
+    """Factory function to get the appropriate data manager based on configuration.
+    
+    Returns either a DataManager (JSON) or NeonDataManager (PostgreSQL) instance
+    depending on the USE_NEON configuration setting.
+    """
+    if config.USE_NEON:
+        from src.neon_data_manager import NeonDataManager
+        return NeonDataManager()
+    else:
+        return DataManager()
+
