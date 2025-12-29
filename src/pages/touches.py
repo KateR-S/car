@@ -233,7 +233,7 @@ def render_touch_form(data_manager: DataManager, editing_touch: Touch = None):
         
         st.markdown("---")
         st.markdown("**Bell Assignments** (12 bells)")
-        st.caption("Assign ringers to each bell and check the conductor checkbox in the row of the conductor")
+        st.caption("Assign ringers to each bell and check the conductor checkbox in the row of the conductor. Only one conductor can be selected.")
         
         # Create table header
         col1, col2, col3 = st.columns([1, 3, 1])
@@ -280,8 +280,9 @@ def render_touch_form(data_manager: DataManager, editing_touch: Touch = None):
                 bell_assignments.append(employee_id_map[bell_selection])
             
             with col3:
-                # Radio button functionality using checkboxes
-                # We'll use the value to track which one is checked
+                # Checkbox for conductor selection
+                # Note: In a form, checkboxes don't support dynamic mutual exclusion,
+                # so we validate on submit to ensure only one is checked
                 is_checked = (conductor_bell_index == i)
                 st.checkbox(
                     f"Conductor {i+1}",
@@ -311,20 +312,22 @@ def render_touch_form(data_manager: DataManager, editing_touch: Touch = None):
             st.rerun()
         
         if submit:
-            # Find which conductor checkbox is checked
-            conductor_bell_index = None
+            # Find which conductor checkboxes are checked
+            checked_conductors = []
             for i in range(12):
                 checkbox_key = f"conductor_{i}_{editing_touch.id if editing_touch else 'new'}"
                 if st.session_state.get(checkbox_key, False):
-                    conductor_bell_index = i
-                    break
+                    checked_conductors.append(i)
             
-            # Validate that conductor bell has a ringer assigned
-            if conductor_bell_index is None:
+            # Validate conductor selection
+            if len(checked_conductors) == 0:
                 st.error("Please select a conductor by checking one of the conductor checkboxes")
-            elif bell_assignments[conductor_bell_index] is None:
-                st.error(f"Please assign a ringer to Bell {conductor_bell_index + 1} (the selected conductor bell)")
+            elif len(checked_conductors) > 1:
+                st.error(f"Please select only ONE conductor. You have selected {len(checked_conductors)} conductors (bells: {', '.join(str(c+1) for c in checked_conductors)})")
+            elif bell_assignments[checked_conductors[0]] is None:
+                st.error(f"Please assign a ringer to Bell {checked_conductors[0] + 1} (the selected conductor bell)")
             else:
+                conductor_bell_index = checked_conductors[0]
                 conductor_id = bell_assignments[conductor_bell_index]
                 
                 if editing_touch:
