@@ -9,7 +9,7 @@ import config
 
 def render_touches_page(data_manager: DataManager):
     """Render the touches management page."""
-    st.title("🎯 Touch Management")
+    st.title("Touch Management")
     
     # Add touch button in popover
     col1, col2, col3 = st.columns([1, 1, 4])
@@ -110,7 +110,7 @@ def render_touch_form(data_manager: DataManager, editing_touch: Touch = None):
         return
     
     if not employees:
-        st.warning("⚠️ Please add employees before creating touches.")
+        st.warning("⚠️ Please add ringers before creating touches.")
         return
     
     if not methods:
@@ -179,7 +179,7 @@ def render_touch_form(data_manager: DataManager, editing_touch: Touch = None):
             options=method_options,
             index=method_index,
             key=f"touch_method_{editing_touch.id if editing_touch else 'new'}",
-            help="Select the workshop method. Go to Methods page to add new methods."
+            help="To add a new method, go to the methods page."
         )
         method_id = method_id_map[selected_method]
         
@@ -192,7 +192,7 @@ def render_touch_form(data_manager: DataManager, editing_touch: Touch = None):
             conductor_index = 0
         
         conductor_selection = st.selectbox(
-            "Conductor (Facilitator) *",
+            "Conductor *",
             options=employee_options,
             index=conductor_index,
             key=f"touch_conductor_{editing_touch.id if editing_touch else 'new'}"
