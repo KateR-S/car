@@ -49,9 +49,9 @@ class NeonDataManager:
         conn = self._get_connection()
         try:
             with conn.cursor() as cur:
-                # Create employees table
+                # Create ringers table
                 cur.execute("""
-                    CREATE TABLE IF NOT EXISTS employees (
+                    CREATE TABLE IF NOT EXISTS ringers (
                         id VARCHAR(255) PRIMARY KEY,
                         first_name VARCHAR(255) NOT NULL,
                         last_name VARCHAR(255) NOT NULL,
@@ -88,7 +88,7 @@ class NeonDataManager:
                         bells JSONB NOT NULL,
                         FOREIGN KEY (practice_id) REFERENCES practices(id) ON DELETE CASCADE,
                         FOREIGN KEY (method_id) REFERENCES methods(id),
-                        FOREIGN KEY (conductor_id) REFERENCES employees(id)
+                        FOREIGN KEY (conductor_id) REFERENCES ringers(id)
                     )
                 """)
                 
@@ -96,60 +96,60 @@ class NeonDataManager:
         finally:
             conn.close()
     
-    # Employee methods
+    # Ringer methods
     def get_employees(self) -> List[Employee]:
-        """Get all employees."""
+        """Get all ringers."""
         conn = self._get_connection()
         try:
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
-                cur.execute("SELECT * FROM employees ORDER BY last_name, first_name")
+                cur.execute("SELECT * FROM ringers ORDER BY last_name, first_name")
                 rows = cur.fetchall()
                 return [Employee(**dict(row)) for row in rows]
         finally:
             conn.close()
     
-    def add_employee(self, employee: Employee):
-        """Add a new employee."""
+    def add_employee(self, ringer: Employee):
+        """Add a new ringer."""
         conn = self._get_connection()
         try:
             with conn.cursor() as cur:
                 cur.execute(
-                    "INSERT INTO employees (id, first_name, last_name, member, resident) VALUES (%s, %s, %s, %s, %s)",
-                    (employee.id, employee.first_name, employee.last_name, employee.member, employee.resident)
+                    "INSERT INTO ringers (id, first_name, last_name, member, resident) VALUES (%s, %s, %s, %s, %s)",
+                    (ringer.id, ringer.first_name, ringer.last_name, ringer.member, ringer.resident)
                 )
             conn.commit()
         finally:
             conn.close()
     
-    def update_employee(self, employee_id: str, employee: Employee):
-        """Update an existing employee."""
+    def update_employee(self, ringer_id: str, ringer: Employee):
+        """Update an existing ringer."""
         conn = self._get_connection()
         try:
             with conn.cursor() as cur:
                 cur.execute(
-                    "UPDATE employees SET first_name=%s, last_name=%s, member=%s, resident=%s WHERE id=%s",
-                    (employee.first_name, employee.last_name, employee.member, employee.resident, employee_id)
+                    "UPDATE ringers SET first_name=%s, last_name=%s, member=%s, resident=%s WHERE id=%s",
+                    (ringer.first_name, ringer.last_name, ringer.member, ringer.resident, ringer_id)
                 )
             conn.commit()
         finally:
             conn.close()
     
-    def delete_employee(self, employee_id: str):
-        """Delete an employee."""
+    def delete_employee(self, ringer_id: str):
+        """Delete a ringer."""
         conn = self._get_connection()
         try:
             with conn.cursor() as cur:
-                cur.execute("DELETE FROM employees WHERE id=%s", (employee_id,))
+                cur.execute("DELETE FROM ringers WHERE id=%s", (ringer_id,))
             conn.commit()
         finally:
             conn.close()
     
-    def get_employee_by_id(self, employee_id: str) -> Optional[Employee]:
-        """Get employee by ID."""
+    def get_employee_by_id(self, ringer_id: str) -> Optional[Employee]:
+        """Get ringer by ID."""
         conn = self._get_connection()
         try:
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
-                cur.execute("SELECT * FROM employees WHERE id=%s", (employee_id,))
+                cur.execute("SELECT * FROM ringers WHERE id=%s", (ringer_id,))
                 row = cur.fetchone()
                 return Employee(**dict(row)) if row else None
         finally:
