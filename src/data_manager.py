@@ -2,7 +2,7 @@
 
 import json
 import os
-from typing import Dict, List
+from typing import Dict, List, Optional
 from src.models import Employee, Practice, Touch
 import config
 
@@ -175,7 +175,3 @@ class DataManager:
         if "methods" in data and method in data["methods"]:
             data["methods"].remove(method)
             self._save_data(data)
-
-
-# Import Optional at the top
-from typing import Optional
