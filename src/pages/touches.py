@@ -11,18 +11,34 @@ def render_touches_page(data_manager: DataManager):
     """Render the touches management page."""
     st.title("Touch Management")
     
-    # Add touch button in popover
-    col1, col2, col3 = st.columns([1, 1, 4])
-    with col1:
-        with st.popover("➕ Add Touch", use_container_width=True):
-            render_touch_form(data_manager, None)
+    # Initialize session state for tab management
+    if 'touch_tab' not in st.session_state:
+        st.session_state.touch_tab = 0  # 0 = List, 1 = Add/Edit
+    if 'editing_touch_id' not in st.session_state:
+        st.session_state.editing_touch_id = None
     
-    # Display touch list
-    render_touch_list(data_manager)
+    # Create tabs
+    tab1, tab2 = st.tabs(["📋 List Touches", "➕ Add/Edit Touch"])
+    
+    with tab1:
+        render_touch_list(data_manager)
+    
+    with tab2:
+        editing_touch = None
+        if st.session_state.editing_touch_id:
+            editing_touch = data_manager.get_touch_by_id(st.session_state.editing_touch_id)
+        render_touch_form(data_manager, editing_touch)
 
 
 def render_touch_list(data_manager: DataManager):
     """Render list of touches with edit/delete options."""
+    # Add touch button at the top
+    if st.button("➕ Add Touch", type="primary", use_container_width=False):
+        st.session_state.editing_touch_id = None
+        st.rerun()
+    
+    st.markdown("---")
+    
     touches = data_manager.get_touches()
     practices = {p.id: p for p in data_manager.get_practices()}
     employees = {e.id: e for e in data_manager.get_employees()}
@@ -34,16 +50,30 @@ def render_touch_list(data_manager: DataManager):
     
     st.subheader(f"Total Touches: {len(touches)}")
     
-    # Group by practice
-    touches_by_practice = {}
+    # Sort touches by practice date (descending)
+    touches_with_dates = []
     for touch in touches:
-        if touch.practice_id not in touches_by_practice:
-            touches_by_practice[touch.practice_id] = []
-        touches_by_practice[touch.practice_id].append(touch)
+        practice = practices.get(touch.practice_id)
+        if practice:
+            # Convert date string (DD-MM-YYYY) to sortable format
+            date_parts = practice.date.split('-')
+            if len(date_parts) == 3:
+                sortable_date = f"{date_parts[2]}-{date_parts[1]}-{date_parts[0]}"  # YYYY-MM-DD
+                touches_with_dates.append((touch, sortable_date, practice))
     
-    # Display touches grouped by practice
-    for practice_id, practice_touches in touches_by_practice.items():
-        practice = practices.get(practice_id)
+    # Sort by date descending
+    touches_with_dates.sort(key=lambda x: x[1], reverse=True)
+    
+    # Group by practice for display
+    touches_by_practice = {}
+    for touch, sortable_date, practice in touches_with_dates:
+        practice_id = touch.practice_id
+        if practice_id not in touches_by_practice:
+            touches_by_practice[practice_id] = (practice, [])
+        touches_by_practice[practice_id][1].append(touch)
+    
+    # Display touches grouped by practice (already sorted by date)
+    for practice_id, (practice, practice_touches) in touches_by_practice.items():
         if practice:
             st.markdown(f"### 📅 Practice: {practice.date} - {practice.location}")
         else:
@@ -67,9 +97,10 @@ def render_touch_list(data_manager: DataManager):
                     st.caption(f"🔔 {filled_bells}/12 bells filled")
                 
                 with col2:
-                    # Edit button in popover
-                    with st.popover("✏️ Edit", use_container_width=True):
-                        render_touch_form(data_manager, touch)
+                    # Edit button that switches to edit tab
+                    if st.button("✏️ Edit", key=f"edit_touch_{touch.id}", use_container_width=True):
+                        st.session_state.editing_touch_id = touch.id
+                        st.rerun()
                 
                 with col3:
                     if st.button("🗑️ Delete", key=f"delete_touch_{touch.id}"):
@@ -95,7 +126,7 @@ def render_touch_list(data_manager: DataManager):
 
 
 def render_touch_form(data_manager: DataManager, editing_touch: Touch = None):
-    """Render form to add or edit a touch.
+    """Render form to add or edit a touch with table layout.
     
     Args:
         data_manager: The data manager instance
@@ -183,34 +214,38 @@ def render_touch_form(data_manager: DataManager, editing_touch: Touch = None):
         )
         method_id = method_id_map[selected_method]
         
-        # Conductor selection
-        if editing_touch and editing_touch.conductor_id:
-            conductor_emp = next((e for e in employees if e.id == editing_touch.conductor_id), None)
-            conductor_str = f"{conductor_emp.full_name()}" if conductor_emp else ""
-            conductor_index = employee_options.index(conductor_str) if conductor_str in employee_options else 0
-        else:
-            conductor_index = 0
+        st.markdown("---")
+        st.markdown("**Bell Assignments** (12 bells)")
+        st.caption("Assign ringers to each bell and check the conductor checkbox in the row of the conductor")
         
-        conductor_selection = st.selectbox(
-            "Conductor *",
-            options=employee_options,
-            index=conductor_index,
-            key=f"touch_conductor_{editing_touch.id if editing_touch else 'new'}"
-        )
-        conductor_id = employee_id_map[conductor_selection]
+        # Create table header
+        col1, col2, col3 = st.columns([1, 3, 1])
+        with col1:
+            st.markdown("**Bell**")
+        with col2:
+            st.markdown("**Ringer**")
+        with col3:
+            st.markdown("**Conductor**")
+        
+        st.markdown("---")
+        
+        # Determine current conductor bell if editing
+        conductor_bell_index = None
+        if editing_touch and editing_touch.conductor_id:
+            for i, bell_id in enumerate(editing_touch.bells):
+                if bell_id == editing_touch.conductor_id:
+                    conductor_bell_index = i
+                    break
         
         # Bell assignments
-        st.markdown("**Bell Assignments** (12 slots)")
-        st.caption("Assign employees to each bell slot")
-        
         bell_assignments = []
-        cols_per_row = 2  # Changed from 3 to 2 for wider dropdowns
         for i in range(12):
-            if i % cols_per_row == 0:
-                cols = st.columns(cols_per_row)
+            col1, col2, col3 = st.columns([1, 3, 1])
             
-            col = cols[i % cols_per_row]
-            with col:
+            with col1:
+                st.markdown(f"**{i+1}**")
+            
+            with col2:
                 if editing_touch and i < len(editing_touch.bells) and editing_touch.bells[i]:
                     bell_emp = next((e for e in employees if e.id == editing_touch.bells[i]), None)
                     bell_str = f"{bell_emp.full_name()}" if bell_emp else ""
@@ -222,20 +257,58 @@ def render_touch_form(data_manager: DataManager, editing_touch: Touch = None):
                     f"Bell {i+1}",
                     options=employee_options,
                     index=bell_index,
-                    key=f"bell_{i}_{editing_touch.id if editing_touch else 'new'}"
+                    key=f"bell_{i}_{editing_touch.id if editing_touch else 'new'}",
+                    label_visibility="collapsed"
                 )
                 bell_assignments.append(employee_id_map[bell_selection])
+            
+            with col3:
+                # Radio button functionality using checkboxes
+                # We'll use the value to track which one is checked
+                is_checked = (conductor_bell_index == i)
+                st.checkbox(
+                    f"Conductor {i+1}",
+                    value=is_checked,
+                    key=f"conductor_{i}_{editing_touch.id if editing_touch else 'new'}",
+                    label_visibility="collapsed"
+                )
         
-        submit = st.form_submit_button(
-            "Update Touch" if editing_touch else "Add Touch",
-            type="primary",
-            use_container_width=True
-        )
+        st.markdown("---")
+        
+        col1, col2 = st.columns([1, 1])
+        with col1:
+            submit = st.form_submit_button(
+                "💾 Save Touch" if editing_touch else "➕ Add Touch",
+                type="primary",
+                use_container_width=True
+            )
+        with col2:
+            cancel = st.form_submit_button(
+                "❌ Cancel",
+                use_container_width=True
+            )
+        
+        if cancel:
+            st.session_state.editing_touch_id = None
+            st.rerun()
         
         if submit:
-            if not method_id or not conductor_id:
-                st.error("Please select method and conductor")
+            # Find which conductor checkbox is checked
+            conductor_bell_index = None
+            for i in range(12):
+                checkbox_key = f"conductor_{i}_{editing_touch.id if editing_touch else 'new'}"
+                if st.session_state.get(checkbox_key, False):
+                    conductor_bell_index = i
+                    break
+            
+            # Validate that conductor bell has a ringer assigned
+            if conductor_bell_index is None:
+                st.error("Please select a conductor by checking one of the conductor checkboxes")
+            elif bell_assignments[conductor_bell_index] is None:
+                st.error(f"Please assign a ringer to Bell {conductor_bell_index + 1} (the selected conductor bell)")
             else:
+                conductor_id = bell_assignments[conductor_bell_index]
+                
                 if editing_touch:
                     # Update existing touch
                     updated_touch = Touch(
@@ -246,7 +319,7 @@ def render_touch_form(data_manager: DataManager, editing_touch: Touch = None):
                         bells=bell_assignments
                     )
                     data_manager.update_touch(editing_touch.id, updated_touch)
-                    st.success("Updated touch")
+                    st.success("Touch updated successfully!")
                 else:
                     # Add new touch
                     new_touch = Touch(
@@ -257,6 +330,8 @@ def render_touch_form(data_manager: DataManager, editing_touch: Touch = None):
                         bells=bell_assignments
                     )
                     data_manager.add_touch(new_touch)
-                    st.success("Added touch")
+                    st.success("Touch added successfully!")
                 
+                # Reset editing state and return to list tab
+                st.session_state.editing_touch_id = None
                 st.rerun()
