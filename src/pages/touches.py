@@ -17,13 +17,28 @@ def render_touches_page(data_manager: DataManager):
     if 'editing_touch_id' not in st.session_state:
         st.session_state.editing_touch_id = None
     
-    # Create tabs
-    tab1, tab2 = st.tabs(["📋 List Touches", "➕ Add/Edit Touch"])
+    # Create custom tab buttons
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("📋 List Touches", 
+                     type="primary" if st.session_state.touch_tab == 0 else "secondary",
+                     use_container_width=True):
+            st.session_state.touch_tab = 0
+            st.rerun()
     
-    with tab1:
+    with col2:
+        if st.button("➕ Add/Edit Touch",
+                     type="primary" if st.session_state.touch_tab == 1 else "secondary",
+                     use_container_width=True):
+            st.session_state.touch_tab = 1
+            st.rerun()
+    
+    st.markdown("---")
+    
+    # Render the appropriate view based on selected tab
+    if st.session_state.touch_tab == 0:
         render_touch_list(data_manager)
-    
-    with tab2:
+    else:
         editing_touch = None
         if st.session_state.editing_touch_id:
             editing_touch = data_manager.get_touch_by_id(st.session_state.editing_touch_id)
@@ -35,6 +50,7 @@ def render_touch_list(data_manager: DataManager):
     # Add touch button at the top
     if st.button("➕ Add Touch", type="primary", use_container_width=False):
         st.session_state.editing_touch_id = None
+        st.session_state.touch_tab = 1  # Switch to Add/Edit tab
         st.rerun()
     
     st.markdown("---")
@@ -100,6 +116,7 @@ def render_touch_list(data_manager: DataManager):
                     # Edit button that switches to edit tab
                     if st.button("✏️ Edit", key=f"edit_touch_{touch.id}", use_container_width=True):
                         st.session_state.editing_touch_id = touch.id
+                        st.session_state.touch_tab = 1  # Switch to Add/Edit tab
                         st.rerun()
                 
                 with col3:
@@ -290,6 +307,7 @@ def render_touch_form(data_manager: DataManager, editing_touch: Touch = None):
         
         if cancel:
             st.session_state.editing_touch_id = None
+            st.session_state.touch_tab = 0  # Return to list tab
             st.rerun()
         
         if submit:
@@ -334,4 +352,5 @@ def render_touch_form(data_manager: DataManager, editing_touch: Touch = None):
                 
                 # Reset editing state and return to list tab
                 st.session_state.editing_touch_id = None
+                st.session_state.touch_tab = 0  # Return to list tab
                 st.rerun()
