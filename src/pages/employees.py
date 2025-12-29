@@ -11,14 +11,14 @@ def render_employees_page(data_manager: DataManager):
     """Render the employees management page."""
     st.title("👥 Employee Management")
     
-    # Tabs for different actions
-    tab1, tab2 = st.tabs(["📋 View Employees", "➕ Add/Edit Employee"])
+    # Add employee button in popover
+    col1, col2, col3 = st.columns([1, 1, 4])
+    with col1:
+        with st.popover("➕ Add Employee", use_container_width=True):
+            render_employee_form(data_manager, None)
     
-    with tab1:
-        render_employee_list(data_manager)
-    
-    with tab2:
-        render_employee_form(data_manager)
+    # Display employee list
+    render_employee_list(data_manager)
 
 
 def render_employee_list(data_manager: DataManager):
@@ -26,7 +26,7 @@ def render_employee_list(data_manager: DataManager):
     employees = data_manager.get_employees()
     
     if not employees:
-        st.info("No employees found. Add your first employee using the 'Add/Edit Employee' tab.")
+        st.info("No employees found. Click 'Add Employee' above to add your first employee.")
         return
     
     st.subheader(f"Total Employees: {len(employees)}")
@@ -42,9 +42,9 @@ def render_employee_list(data_manager: DataManager):
                 st.caption(f"{member_status} | Resident: {emp.resident}")
             
             with col2:
-                if st.button("✏️ Edit", key=f"edit_{emp.id}"):
-                    st.session_state.editing_employee = emp.id
-                    st.rerun()
+                # Edit button in popover
+                with st.popover("✏️ Edit", use_container_width=True):
+                    render_employee_form(data_manager, emp)
             
             with col3:
                 if st.button("🗑️ Delete", key=f"delete_{emp.id}"):
@@ -55,67 +55,53 @@ def render_employee_list(data_manager: DataManager):
             st.divider()
 
 
-def render_employee_form(data_manager: DataManager):
-    """Render form to add or edit an employee."""
-    # Check if editing
-    editing_id = st.session_state.get("editing_employee", None)
-    editing_employee = None
+def render_employee_form(data_manager: DataManager, editing_employee: Employee = None):
+    """Render form to add or edit an employee.
     
-    if editing_id:
-        editing_employee = data_manager.get_employee_by_id(editing_id)
+    Args:
+        data_manager: The data manager instance
+        editing_employee: Employee object if editing, None if adding new
+    """
+    if editing_employee:
         st.subheader("✏️ Edit Employee")
     else:
         st.subheader("➕ Add New Employee")
     
+    # Generate unique form key
+    form_key = f"employee_form_{editing_employee.id if editing_employee else 'new'}"
+    
     # Form
-    with st.form("employee_form", clear_on_submit=True):
-        col1, col2 = st.columns(2)
+    with st.form(form_key, clear_on_submit=True):
+        first_name = st.text_input(
+            "First Name *",
+            value=editing_employee.first_name if editing_employee else "",
+            key=f"emp_first_name_{editing_employee.id if editing_employee else 'new'}"
+        )
         
-        with col1:
-            first_name = st.text_input(
-                "First Name *",
-                value=editing_employee.first_name if editing_employee else "",
-                key="emp_first_name"
-            )
+        last_name = st.text_input(
+            "Last Name *",
+            value=editing_employee.last_name if editing_employee else "",
+            key=f"emp_last_name_{editing_employee.id if editing_employee else 'new'}"
+        )
         
-        with col2:
-            last_name = st.text_input(
-                "Last Name *",
-                value=editing_employee.last_name if editing_employee else "",
-                key="emp_last_name"
-            )
+        member = st.checkbox(
+            "Member",
+            value=editing_employee.member if editing_employee else False,
+            key=f"emp_member_{editing_employee.id if editing_employee else 'new'}"
+        )
         
-        col3, col4 = st.columns(2)
+        resident = st.selectbox(
+            "Resident Type *",
+            options=config.RESIDENT_TYPES,
+            index=config.RESIDENT_TYPES.index(editing_employee.resident) if editing_employee else 0,
+            key=f"emp_resident_{editing_employee.id if editing_employee else 'new'}"
+        )
         
-        with col3:
-            member = st.checkbox(
-                "Member",
-                value=editing_employee.member if editing_employee else False,
-                key="emp_member"
-            )
-        
-        with col4:
-            resident = st.selectbox(
-                "Resident Type *",
-                options=config.RESIDENT_TYPES,
-                index=config.RESIDENT_TYPES.index(editing_employee.resident) if editing_employee else 0,
-                key="emp_resident"
-            )
-        
-        col5, col6, col7 = st.columns([1, 1, 2])
-        
-        with col5:
-            submit = st.form_submit_button(
-                "Update Employee" if editing_employee else "Add Employee",
-                type="primary"
-            )
-        
-        with col6:
-            if editing_employee:
-                cancel = st.form_submit_button("Cancel")
-                if cancel:
-                    st.session_state.editing_employee = None
-                    st.rerun()
+        submit = st.form_submit_button(
+            "Update Employee" if editing_employee else "Add Employee",
+            type="primary",
+            use_container_width=True
+        )
         
         if submit:
             if not first_name or not last_name:
@@ -132,7 +118,6 @@ def render_employee_form(data_manager: DataManager):
                     )
                     data_manager.update_employee(editing_employee.id, updated_employee)
                     st.success(f"Updated {updated_employee.full_name()}")
-                    st.session_state.editing_employee = None
                 else:
                     # Add new employee
                     new_employee = Employee(
