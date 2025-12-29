@@ -10,7 +10,7 @@ import config
 
 def render_practices_page(data_manager: DataManager):
     """Render the practices management page."""
-    st.title("📅 Practice Management")
+    st.title("Practice Management")
     
     # Add practice button in popover
     col1, col2, col3 = st.columns([1, 1, 4])

@@ -12,7 +12,6 @@ from src.pages.methods import render_methods_page
 # Page configuration
 st.set_page_config(
     page_title="Attendance Tracking App",
-    page_icon="📊",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -36,7 +35,7 @@ def main():
         # Navigation menu
         page = st.radio(
             "Navigation",
-            ["🏠 Home", "👥 Employees", "📅 Practices", "🎯 Touches", "📚 Methods"],
+            ["Home", "Ringers", "Practices", "Touches", "Methods"],
             key="navigation"
         )
         
@@ -50,7 +49,7 @@ def main():
         
         col1, col2 = st.columns(2)
         with col1:
-            st.metric("Employees", len(employees))
+            st.metric("Ringers", len(employees))
             st.metric("Practices", len(practices))
         with col2:
             st.metric("Touches", len(touches))
@@ -62,21 +61,21 @@ def main():
             logout()
     
     # Main content area
-    if page == "🏠 Home":
+    if page == "Home":
         render_home_page(data_manager)
-    elif page == "👥 Employees":
+    elif page == "Ringers":
         render_employees_page(data_manager)
-    elif page == "📅 Practices":
+    elif page == "Practices":
         render_practices_page(data_manager)
-    elif page == "🎯 Touches":
+    elif page == "Touches":
         render_touches_page(data_manager)
-    elif page == "📚 Methods":
+    elif page == "Methods":
         render_methods_page(data_manager)
 
 
 def render_home_page(data_manager: DataManager):
     """Render the home/dashboard page."""
-    st.title("🏠 Attendance Tracking Dashboard")
+    st.title("Attendance Tracking Dashboard")
     st.markdown("Welcome to the Attendance Tracking App!")
     
     st.markdown("---")
@@ -89,14 +88,14 @@ def render_home_page(data_manager: DataManager):
     touches = data_manager.get_touches()
     
     with col1:
-        st.markdown("### 👥 Employees")
+        st.markdown("### Ringers")
         st.metric("Total", len(employees))
         if employees:
             members = sum(1 for e in employees if e.member)
             st.caption(f"Members: {members} | Non-members: {len(employees) - members}")
     
     with col2:
-        st.markdown("### 📅 Practices")
+        st.markdown("### Practices")
         st.metric("Total", len(practices))
         if practices:
             locations = {}
@@ -105,7 +104,7 @@ def render_home_page(data_manager: DataManager):
             st.caption(f"Locations: {', '.join(locations.keys())}")
     
     with col3:
-        st.markdown("### 🎯 Touches")
+        st.markdown("### Touches")
         st.metric("Total", len(touches))
         if touches:
             # Get unique method IDs and count them
@@ -120,43 +119,30 @@ def render_home_page(data_manager: DataManager):
     with st.expander("ℹ️ How to use this app", expanded=False):
         st.markdown("""
         #### Getting Started
+
+        To track details of who rang what tonight:
+
+        1. **Add a new Practice**
+           - Navigate to the Practices page
+           - Add a new practice and make sure the date is correct
+           - You will only need to do this once per practice
+
+        2. **Add a new Touch**
+           - Navigate to the Touches page
+           - Create a new touch
+           - Fill in the touch and ringers
         
-        1. **Add Employees** 👥
-           - Navigate to the Employees page
-           - Add your team members with their details
-           - Specify if they are members and their resident type
-        
-        2. **Create Practices** 📅
-           - Go to the Practices page
-           - Add all-hands days with dates and locations
-           - Practices represent your events
-        
-        3. **Organize Touches** 🎯
-           - Visit the Touches page
-           - Create workshops (touches) for each practice
-           - Assign a conductor (facilitator)
-           - Fill up to 12 bell slots with employees
-        
-        #### Key Terms
-        
-        - **Practice**: An all-hands day event (up to 8 touches per practice)
-        - **Touch**: A workshop within a practice
-        - **Bell**: A participant slot in a touch (12 bells per touch)
-        - **Conductor**: The facilitator of a touch
-        - **Method**: The name/title of a workshop
-        
-        #### Tips
-        
-        - Use the edit (✏️) and delete (🗑️) buttons to manage your data
-        - Data is automatically saved and persists across sessions
-        - The sidebar shows quick statistics at a glance
+        - **If you have issues**
+           - If you are missing a ringer, you need to add them in the "Ringers" page.
+           - If you are missing a method, you need to add it in the "Methods" page.
+           - Use the edit (✏️) and delete (🗑️) buttons to manage your data
         """)
     
     # Recent activity
-    st.markdown("### 📋 Recent Activity")
+    st.markdown("### Recent Activity")
     
     if not employees and not practices and not touches:
-        st.info("👋 No data yet! Start by adding employees, then create practices and touches.")
+        st.info("👋 No data yet! Start by adding ringers, then create practices and touches.")
     else:
         # Show recent practices
         if practices:
