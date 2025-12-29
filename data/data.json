@@ -10,5 +10,11 @@
   ],
   "practices": [],
   "touches": [],
-  "methods": []
+  "methods": [
+    {
+      "id": "2bd1a473-2286-4e4a-9443-4f852b0fa18f",
+      "name": "Team Building Workshop",
+      "code": "TBW-001"
+    }
+  ]
 }
