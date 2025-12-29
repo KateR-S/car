@@ -281,8 +281,12 @@ def render_touch_form(data_manager: DataManager, editing_touch: Touch = None):
             
             with col3:
                 # Checkbox for conductor selection
-                # Note: In a form, checkboxes don't support dynamic mutual exclusion,
-                # so we validate on submit to ensure only one is checked
+                # Note: Checkboxes are used instead of radio buttons because:
+                # 1. The requirement specifies "checkbox" in the conductor column
+                # 2. Radio buttons would require a different UI layout (single group)
+                # 3. In a form, both checkboxes and radio buttons are submitted together,
+                #    so neither can provide dynamic mutual exclusion during user interaction
+                # 4. We validate on submit to ensure only one conductor is selected
                 is_checked = (conductor_bell_index == i)
                 st.checkbox(
                     f"Conductor {i+1}",
