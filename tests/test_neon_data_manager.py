@@ -154,24 +154,25 @@ class TestNeonDataManager:
         }
         
         with patch.dict(os.environ, env_vars, clear=False):
-            with patch.object(NeonDataManager, '_ensure_tables'):
-                manager = NeonDataManager()
-                
-                mock_conn = Mock()
-                mock_cursor = Mock()
-                
-                with patch.object(manager, '_get_connection', return_value=mock_conn):
-                    mock_conn.cursor.return_value.__enter__ = Mock(return_value=mock_cursor)
-                    mock_conn.cursor.return_value.__exit__ = Mock(return_value=False)
+            with patch.object(NeonDataManager, '_init_connection_pool'):
+                with patch.object(NeonDataManager, '_ensure_tables'):
+                    manager = NeonDataManager()
                     
-                    ringer = Employee(id='1', first_name='Jane', last_name='Smith', member=False, resident='Regional')
-                    manager.add_employee(ringer)
+                    mock_conn = Mock()
+                    mock_cursor = Mock()
                     
-                    mock_cursor.execute.assert_called_once()
-                    call_args = mock_cursor.execute.call_args[0]
-                    assert 'INSERT INTO ringers' in call_args[0]
-                    assert call_args[1] == ('1', 'Jane', 'Smith', False, 'Regional')
-                    mock_conn.commit.assert_called_once()
+                    with patch.object(manager, '_get_connection', return_value=mock_conn):
+                        mock_conn.cursor.return_value.__enter__ = Mock(return_value=mock_cursor)
+                        mock_conn.cursor.return_value.__exit__ = Mock(return_value=False)
+                        
+                        ringer = Employee(id='1', first_name='Jane', last_name='Smith', member=False, resident='Regional')
+                        manager.add_employee(ringer)
+                        
+                        mock_cursor.execute.assert_called_once()
+                        call_args = mock_cursor.execute.call_args[0]
+                        assert 'INSERT INTO ringers' in call_args[0]
+                        assert call_args[1] == ('1', 'Jane', 'Smith', False, 'Regional')
+                        mock_conn.commit.assert_called_once()
     
     def test_update_employee(self):
         """Test updating a ringer."""
@@ -183,24 +184,25 @@ class TestNeonDataManager:
         }
         
         with patch.dict(os.environ, env_vars, clear=False):
-            with patch.object(NeonDataManager, '_ensure_tables'):
-                manager = NeonDataManager()
-                
-                mock_conn = Mock()
-                mock_cursor = Mock()
-                
-                with patch.object(manager, '_get_connection', return_value=mock_conn):
-                    mock_conn.cursor.return_value.__enter__ = Mock(return_value=mock_cursor)
-                    mock_conn.cursor.return_value.__exit__ = Mock(return_value=False)
+            with patch.object(NeonDataManager, '_init_connection_pool'):
+                with patch.object(NeonDataManager, '_ensure_tables'):
+                    manager = NeonDataManager()
                     
-                    ringer = Employee(id='1', first_name='Jane', last_name='Doe', member=True, resident='Local')
-                    manager.update_employee('1', ringer)
+                    mock_conn = Mock()
+                    mock_cursor = Mock()
                     
-                    mock_cursor.execute.assert_called_once()
-                    call_args = mock_cursor.execute.call_args[0]
-                    assert 'UPDATE ringers' in call_args[0]
-                    assert call_args[1] == ('Jane', 'Doe', True, 'Local', '1')
-                    mock_conn.commit.assert_called_once()
+                    with patch.object(manager, '_get_connection', return_value=mock_conn):
+                        mock_conn.cursor.return_value.__enter__ = Mock(return_value=mock_cursor)
+                        mock_conn.cursor.return_value.__exit__ = Mock(return_value=False)
+                        
+                        ringer = Employee(id='1', first_name='Jane', last_name='Doe', member=True, resident='Local')
+                        manager.update_employee('1', ringer)
+                        
+                        mock_cursor.execute.assert_called_once()
+                        call_args = mock_cursor.execute.call_args[0]
+                        assert 'UPDATE ringers' in call_args[0]
+                        assert call_args[1] == ('Jane', 'Doe', True, 'Local', '1')
+                        mock_conn.commit.assert_called_once()
     
     def test_delete_employee(self):
         """Test deleting a ringer."""
@@ -212,23 +214,24 @@ class TestNeonDataManager:
         }
         
         with patch.dict(os.environ, env_vars, clear=False):
-            with patch.object(NeonDataManager, '_ensure_tables'):
-                manager = NeonDataManager()
-                
-                mock_conn = Mock()
-                mock_cursor = Mock()
-                
-                with patch.object(manager, '_get_connection', return_value=mock_conn):
-                    mock_conn.cursor.return_value.__enter__ = Mock(return_value=mock_cursor)
-                    mock_conn.cursor.return_value.__exit__ = Mock(return_value=False)
+            with patch.object(NeonDataManager, '_init_connection_pool'):
+                with patch.object(NeonDataManager, '_ensure_tables'):
+                    manager = NeonDataManager()
                     
-                    manager.delete_employee('1')
+                    mock_conn = Mock()
+                    mock_cursor = Mock()
                     
-                    mock_cursor.execute.assert_called_once()
-                    call_args = mock_cursor.execute.call_args[0]
-                    assert 'DELETE FROM ringers' in call_args[0]
-                    assert call_args[1] == ('1',)
-                    mock_conn.commit.assert_called_once()
+                    with patch.object(manager, '_get_connection', return_value=mock_conn):
+                        mock_conn.cursor.return_value.__enter__ = Mock(return_value=mock_cursor)
+                        mock_conn.cursor.return_value.__exit__ = Mock(return_value=False)
+                        
+                        manager.delete_employee('1')
+                        
+                        mock_cursor.execute.assert_called_once()
+                        call_args = mock_cursor.execute.call_args[0]
+                        assert 'DELETE FROM ringers' in call_args[0]
+                        assert call_args[1] == ('1',)
+                        mock_conn.commit.assert_called_once()
     
     def test_get_employee_by_id(self):
         """Test getting a ringer by ID."""
@@ -240,27 +243,28 @@ class TestNeonDataManager:
         }
         
         with patch.dict(os.environ, env_vars, clear=False):
-            with patch.object(NeonDataManager, '_ensure_tables'):
-                manager = NeonDataManager()
-                
-                mock_conn = Mock()
-                mock_cursor = Mock()
-                mock_cursor.fetchone.return_value = {
-                    'id': '1', 'first_name': 'John', 'last_name': 'Doe', 'member': True, 'resident': 'Local'
-                }
-                
-                with patch.object(manager, '_get_connection', return_value=mock_conn):
-                    mock_conn.cursor.return_value.__enter__ = Mock(return_value=mock_cursor)
-                    mock_conn.cursor.return_value.__exit__ = Mock(return_value=False)
+            with patch.object(NeonDataManager, '_init_connection_pool'):
+                with patch.object(NeonDataManager, '_ensure_tables'):
+                    manager = NeonDataManager()
                     
-                    ringer = manager.get_employee_by_id('1')
+                    mock_conn = Mock()
+                    mock_cursor = Mock()
+                    mock_cursor.fetchone.return_value = {
+                        'id': '1', 'first_name': 'John', 'last_name': 'Doe', 'member': True, 'resident': 'Local'
+                    }
                     
-                    assert ringer is not None
-                    assert isinstance(ringer, Employee)
-                    assert ringer.id == '1'
-                    assert ringer.first_name == 'John'
-                    mock_cursor.execute.assert_called_once()
-                    assert 'SELECT * FROM ringers WHERE id=' in mock_cursor.execute.call_args[0][0]
+                    with patch.object(manager, '_get_connection', return_value=mock_conn):
+                        mock_conn.cursor.return_value.__enter__ = Mock(return_value=mock_cursor)
+                        mock_conn.cursor.return_value.__exit__ = Mock(return_value=False)
+                        
+                        ringer = manager.get_employee_by_id('1')
+                        
+                        assert ringer is not None
+                        assert isinstance(ringer, Employee)
+                        assert ringer.id == '1'
+                        assert ringer.first_name == 'John'
+                        mock_cursor.execute.assert_called_once()
+                        assert 'SELECT * FROM ringers WHERE id=' in mock_cursor.execute.call_args[0][0]
     
     def test_get_employee_by_id_not_found(self):
         """Test getting a ringer by ID that doesn't exist."""
@@ -272,20 +276,21 @@ class TestNeonDataManager:
         }
         
         with patch.dict(os.environ, env_vars, clear=False):
-            with patch.object(NeonDataManager, '_ensure_tables'):
-                manager = NeonDataManager()
-                
-                mock_conn = Mock()
-                mock_cursor = Mock()
-                mock_cursor.fetchone.return_value = None
-                
-                with patch.object(manager, '_get_connection', return_value=mock_conn):
-                    mock_conn.cursor.return_value.__enter__ = Mock(return_value=mock_cursor)
-                    mock_conn.cursor.return_value.__exit__ = Mock(return_value=False)
+            with patch.object(NeonDataManager, '_init_connection_pool'):
+                with patch.object(NeonDataManager, '_ensure_tables'):
+                    manager = NeonDataManager()
                     
-                    ringer = manager.get_employee_by_id('999')
+                    mock_conn = Mock()
+                    mock_cursor = Mock()
+                    mock_cursor.fetchone.return_value = None
                     
-                    assert ringer is None
+                    with patch.object(manager, '_get_connection', return_value=mock_conn):
+                        mock_conn.cursor.return_value.__enter__ = Mock(return_value=mock_cursor)
+                        mock_conn.cursor.return_value.__exit__ = Mock(return_value=False)
+                        
+                        ringer = manager.get_employee_by_id('999')
+                        
+                        assert ringer is None
     
     def test_add_practice(self):
         """Test adding a practice."""
@@ -297,23 +302,24 @@ class TestNeonDataManager:
         }
         
         with patch.dict(os.environ, env_vars, clear=False):
-            with patch.object(NeonDataManager, '_ensure_tables'):
-                manager = NeonDataManager()
-                
-                mock_conn = Mock()
-                mock_cursor = Mock()
-                
-                with patch.object(manager, '_get_connection', return_value=mock_conn):
-                    mock_conn.cursor.return_value.__enter__ = Mock(return_value=mock_cursor)
-                    mock_conn.cursor.return_value.__exit__ = Mock(return_value=False)
+            with patch.object(NeonDataManager, '_init_connection_pool'):
+                with patch.object(NeonDataManager, '_ensure_tables'):
+                    manager = NeonDataManager()
                     
-                    practice = Practice(id='p1', date='01-01-2024', location='Office A')
-                    manager.add_practice(practice)
+                    mock_conn = Mock()
+                    mock_cursor = Mock()
                     
-                    mock_cursor.execute.assert_called_once()
-                    call_args = mock_cursor.execute.call_args[0]
-                    assert 'INSERT INTO practices' in call_args[0]
-                    mock_conn.commit.assert_called_once()
+                    with patch.object(manager, '_get_connection', return_value=mock_conn):
+                        mock_conn.cursor.return_value.__enter__ = Mock(return_value=mock_cursor)
+                        mock_conn.cursor.return_value.__exit__ = Mock(return_value=False)
+                        
+                        practice = Practice(id='p1', date='01-01-2024', location='Office A')
+                        manager.add_practice(practice)
+                        
+                        mock_cursor.execute.assert_called_once()
+                        call_args = mock_cursor.execute.call_args[0]
+                        assert 'INSERT INTO practices' in call_args[0]
+                        mock_conn.commit.assert_called_once()
     
     def test_add_touch(self):
         """Test adding a touch."""
@@ -325,23 +331,24 @@ class TestNeonDataManager:
         }
         
         with patch.dict(os.environ, env_vars, clear=False):
-            with patch.object(NeonDataManager, '_ensure_tables'):
-                manager = NeonDataManager()
-                
-                mock_conn = Mock()
-                mock_cursor = Mock()
-                
-                with patch.object(manager, '_get_connection', return_value=mock_conn):
-                    mock_conn.cursor.return_value.__enter__ = Mock(return_value=mock_cursor)
-                    mock_conn.cursor.return_value.__exit__ = Mock(return_value=False)
+            with patch.object(NeonDataManager, '_init_connection_pool'):
+                with patch.object(NeonDataManager, '_ensure_tables'):
+                    manager = NeonDataManager()
                     
-                    touch = Touch(id='t1', practice_id='p1', method_id='m1', conductor_id='r1', bells=[None]*12)
-                    manager.add_touch(touch)
+                    mock_conn = Mock()
+                    mock_cursor = Mock()
                     
-                    mock_cursor.execute.assert_called_once()
-                    call_args = mock_cursor.execute.call_args[0]
-                    assert 'INSERT INTO touches' in call_args[0]
-                    mock_conn.commit.assert_called_once()
+                    with patch.object(manager, '_get_connection', return_value=mock_conn):
+                        mock_conn.cursor.return_value.__enter__ = Mock(return_value=mock_cursor)
+                        mock_conn.cursor.return_value.__exit__ = Mock(return_value=False)
+                        
+                        touch = Touch(id='t1', practice_id='p1', method_id='m1', conductor_id='r1', bells=[None]*12)
+                        manager.add_touch(touch)
+                        
+                        mock_cursor.execute.assert_called_once()
+                        call_args = mock_cursor.execute.call_args[0]
+                        assert 'INSERT INTO touches' in call_args[0]
+                        mock_conn.commit.assert_called_once()
     
     def test_foreign_key_constraint_to_ringers(self):
         """Test that touches table has foreign key constraint to ringers table."""
@@ -358,13 +365,14 @@ class TestNeonDataManager:
             mock_conn.cursor.return_value.__enter__ = Mock(return_value=mock_cursor)
             mock_conn.cursor.return_value.__exit__ = Mock(return_value=False)
             
-            with patch.object(NeonDataManager, '_get_connection', return_value=mock_conn):
-                manager = NeonDataManager()
-                
-                # Check that foreign key references ringers table
-                calls = [str(call) for call in mock_cursor.execute.call_args_list]
-                ringers_fk = any('REFERENCES ringers(id)' in str(call) for call in calls)
-                assert ringers_fk, "Foreign key should reference ringers table"
+            with patch.object(NeonDataManager, '_init_connection_pool'):
+                with patch.object(NeonDataManager, '_get_connection', return_value=mock_conn):
+                    manager = NeonDataManager()
+                    
+                    # Check that foreign key references ringers table
+                    calls = [str(call) for call in mock_cursor.execute.call_args_list]
+                    ringers_fk = any('REFERENCES ringers(id)' in str(call) for call in calls)
+                    assert ringers_fk, "Foreign key should reference ringers table"
     
     def test_connection_cleanup_on_error(self):
         """Test that connections are properly released even on error."""
