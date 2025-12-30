@@ -24,7 +24,6 @@ def check_password() -> bool:
 
     if config.DEFAULT_PASSWORD is None or config.DEFAULT_PASSWORD == "":
         st.error("Admin password not set. Please contact your administrator")
-        st.session_state.authenticated = False
         return False
 
     password = st.text_input("Password", type="password", key="password_input")
