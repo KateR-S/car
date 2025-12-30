@@ -1,12 +1,26 @@
 """Main Streamlit application for Attendance Tracking."""
 
 import streamlit as st
+import logging
 from src.auth import check_password, logout
-from src.data_manager import get_data_manager
+from src.data_manager import (
+    get_data_manager, 
+    get_cached_employees,
+    get_cached_practices,
+    get_cached_touches,
+    get_cached_methods
+)
 from src.pages.employees import render_employees_page
 from src.pages.practices import render_practices_page
 from src.pages.touches import render_touches_page
 from src.pages.methods import render_methods_page
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 
 # Page configuration
@@ -19,13 +33,19 @@ st.set_page_config(
 
 def main():
     """Main application entry point."""
+    logger.info("Starting application")
     
     # Check authentication
     if not check_password():
+        logger.debug("Authentication failed or pending")
         return
     
-    # Initialize data manager (will use Neon if configured)
+    logger.debug("Authentication successful")
+    
+    # Initialize data manager (will use Neon if configured, with connection pooling via cache_resource)
+    logger.debug("Initializing data manager")
     data_manager = get_data_manager()
+    logger.debug("Data manager initialized")
     
     # Sidebar navigation
     with st.sidebar:
@@ -41,11 +61,13 @@ def main():
         
         st.markdown("---")
         
-        # Statistics
+        # Statistics - use cached functions for better performance
         st.markdown("### 📈 Quick Stats")
-        employees = data_manager.get_employees()
-        practices = data_manager.get_practices()
-        touches = data_manager.get_touches()
+        logger.debug("Fetching data for sidebar stats")
+        employees = get_cached_employees(data_manager)
+        practices = get_cached_practices(data_manager)
+        touches = get_cached_touches(data_manager)
+        logger.debug(f"Stats: {len(employees)} employees, {len(practices)} practices, {len(touches)} touches")
         
         col1, col2 = st.columns(2)
         with col1:
@@ -61,6 +83,7 @@ def main():
             logout()
     
     # Main content area
+    logger.info(f"Rendering page: {page}")
     if page == "Home":
         render_home_page(data_manager)
     elif page == "Ringers":
@@ -83,9 +106,12 @@ def render_home_page(data_manager):
     # Overview section
     col1, col2, col3 = st.columns(3)
     
-    employees = data_manager.get_employees()
-    practices = data_manager.get_practices()
-    touches = data_manager.get_touches()
+    # Use cached data functions for better performance
+    logger.debug("Fetching data for home page")
+    employees = get_cached_employees(data_manager)
+    practices = get_cached_practices(data_manager)
+    touches = get_cached_touches(data_manager)
+    logger.debug("Home page data fetched")
     
     with col1:
         st.markdown("### Ringers")
@@ -149,14 +175,14 @@ def render_home_page(data_manager):
             st.markdown("#### Latest Practices")
             recent_practices = sorted(practices, key=lambda p: p.date, reverse=True)[:3]
             for p in recent_practices:
-                touch_count = len(data_manager.get_touches(p.id))
+                touch_count = len(get_cached_touches(data_manager, p.id))
                 st.markdown(f"- **{p.date}** at {p.location} ({touch_count} touch(es))")
         
         # Show method usage
         if touches:
             st.markdown("#### Popular Methods")
             # Get all methods
-            all_methods = {m.id: m for m in data_manager.get_methods()}
+            all_methods = {m.id: m for m in get_cached_methods(data_manager)}
             method_counts = {}
             for t in touches:
                 if t.method_id and t.method_id in all_methods:

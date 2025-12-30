@@ -2,50 +2,100 @@
 
 import os
 import psycopg2
+from psycopg2 import pool
 from psycopg2.extras import RealDictCursor, Json
 from typing import Dict, List, Optional
+import logging
 from src.models import Employee, Practice, Touch, Method
+
+# Configure logging
+logger = logging.getLogger(__name__)
 
 
 class NeonDataManager:
-    """Manages data persistence using Neon PostgreSQL database."""
+    """Manages data persistence using Neon PostgreSQL database with connection pooling."""
     
     def __init__(self):
-        """Initialize Neon data manager with connection from environment variables."""
+        """Initialize Neon data manager with connection pool."""
+        logger.info("Initializing NeonDataManager")
         self.connection_string = self._build_connection_string()
+        self._connection_pool = None
+        self._init_connection_pool()
         self._ensure_tables()
+        logger.info("NeonDataManager initialization complete")
     
     def _build_connection_string(self) -> str:
         """Build PostgreSQL connection string from environment variables.
         
         IMPORTANT: This method uses environment variables and never logs them.
         """
+        logger.debug("Building connection string from environment variables")
         db_role = os.environ.get('DB_ROLE')
         db_pass = os.environ.get('DB_PASS')
         db_name = os.environ.get('DB_NAME')
         db_database = os.environ.get('DB_DATABASE')
         
         if not all([db_role, db_pass, db_name, db_database]):
+            logger.error("Missing required database environment variables")
             raise ValueError(
                 "Missing required environment variables: DB_ROLE, DB_PASS, DB_NAME, DB_DATABASE. "
                 "Please set these environment variables to use Neon database."
             )
         
         # Build connection string (credentials are not logged)
+        logger.debug("Connection string built successfully")
         return f"postgresql://{db_role}:{db_pass}@{db_name}.eu-west-2.aws.neon.tech/{db_database}?sslmode=require&channel_binding=require"
     
-    def _get_connection(self):
-        """Get a database connection with error handling."""
+    def _init_connection_pool(self):
+        """Initialize the connection pool."""
         try:
-            return psycopg2.connect(self.connection_string)
+            logger.info("Creating connection pool (min=1, max=5)")
+            self._connection_pool = pool.SimpleConnectionPool(
+                1,  # minimum connections
+                5,  # maximum connections
+                self.connection_string
+            )
+            logger.info("Connection pool created successfully")
         except psycopg2.OperationalError as e:
+            logger.error(f"Failed to create connection pool: {str(e)}")
             raise ConnectionError(
                 f"Failed to connect to Neon database. Please verify your credentials and network connection. "
                 f"Error: {str(e)}"
             )
     
+    def _get_connection(self):
+        """Get a database connection from the pool."""
+        if self._connection_pool is None:
+            logger.error("Connection pool is not initialized")
+            raise ConnectionError("Connection pool not initialized")
+        
+        try:
+            logger.debug("Getting connection from pool")
+            conn = self._connection_pool.getconn()
+            logger.debug("Connection obtained from pool")
+            return conn
+        except psycopg2.OperationalError as e:
+            logger.error(f"Failed to get connection from pool: {str(e)}")
+            raise ConnectionError(
+                f"Failed to get connection from pool. Error: {str(e)}"
+            )
+    
+    def _release_connection(self, conn):
+        """Release a connection back to the pool."""
+        if self._connection_pool and conn:
+            logger.debug("Releasing connection back to pool")
+            self._connection_pool.putconn(conn)
+    
+    def close_all_connections(self):
+        """Close all connections in the pool. Should be called on app shutdown."""
+        if self._connection_pool:
+            logger.info("Closing all connections in pool")
+            self._connection_pool.closeall()
+            logger.info("All connections closed")
+    
     def _ensure_tables(self):
         """Create database tables if they don't exist."""
+        logger.info("Ensuring database tables exist")
         conn = self._get_connection()
         try:
             with conn.cursor() as cur:
@@ -93,23 +143,27 @@ class NeonDataManager:
                 """)
                 
             conn.commit()
+            logger.info("Database tables ensured")
         finally:
-            conn.close()
+            self._release_connection(conn)
     
     # Ringer methods
     def get_employees(self) -> List[Employee]:
         """Get all ringers."""
+        logger.debug("Fetching all employees")
         conn = self._get_connection()
         try:
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
                 cur.execute("SELECT * FROM ringers ORDER BY last_name, first_name")
                 rows = cur.fetchall()
+                logger.debug(f"Fetched {len(rows)} employees")
                 return [Employee(**dict(row)) for row in rows]
         finally:
-            conn.close()
+            self._release_connection(conn)
     
     def add_employee(self, ringer: Employee):
         """Add a new ringer."""
+        logger.info(f"Adding new employee: {ringer.first_name} {ringer.last_name}")
         conn = self._get_connection()
         try:
             with conn.cursor() as cur:
@@ -118,11 +172,13 @@ class NeonDataManager:
                     (ringer.id, ringer.first_name, ringer.last_name, ringer.member, ringer.resident)
                 )
             conn.commit()
+            logger.info(f"Employee added successfully: {ringer.id}")
         finally:
-            conn.close()
+            self._release_connection(conn)
     
     def update_employee(self, ringer_id: str, ringer: Employee):
         """Update an existing ringer."""
+        logger.info(f"Updating employee: {ringer_id}")
         conn = self._get_connection()
         try:
             with conn.cursor() as cur:
@@ -131,44 +187,53 @@ class NeonDataManager:
                     (ringer.first_name, ringer.last_name, ringer.member, ringer.resident, ringer_id)
                 )
             conn.commit()
+            logger.info(f"Employee updated successfully: {ringer_id}")
         finally:
-            conn.close()
+            self._release_connection(conn)
     
     def delete_employee(self, ringer_id: str):
         """Delete a ringer."""
+        logger.info(f"Deleting employee: {ringer_id}")
         conn = self._get_connection()
         try:
             with conn.cursor() as cur:
                 cur.execute("DELETE FROM ringers WHERE id=%s", (ringer_id,))
             conn.commit()
+            logger.info(f"Employee deleted successfully: {ringer_id}")
         finally:
-            conn.close()
+            self._release_connection(conn)
     
     def get_employee_by_id(self, ringer_id: str) -> Optional[Employee]:
         """Get ringer by ID."""
+        logger.debug(f"Fetching employee by ID: {ringer_id}")
         conn = self._get_connection()
         try:
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
                 cur.execute("SELECT * FROM ringers WHERE id=%s", (ringer_id,))
                 row = cur.fetchone()
-                return Employee(**dict(row)) if row else None
+                result = Employee(**dict(row)) if row else None
+                logger.debug(f"Employee {'found' if result else 'not found'}: {ringer_id}")
+                return result
         finally:
-            conn.close()
+            self._release_connection(conn)
     
     # Practice methods
     def get_practices(self) -> List[Practice]:
         """Get all practices."""
+        logger.debug("Fetching all practices")
         conn = self._get_connection()
         try:
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
                 cur.execute("SELECT * FROM practices ORDER BY date DESC")
                 rows = cur.fetchall()
+                logger.debug(f"Fetched {len(rows)} practices")
                 return [Practice(**dict(row)) for row in rows]
         finally:
-            conn.close()
+            self._release_connection(conn)
     
     def add_practice(self, practice: Practice):
         """Add a new practice."""
+        logger.info(f"Adding new practice: {practice.date} at {practice.location}")
         conn = self._get_connection()
         try:
             with conn.cursor() as cur:
@@ -177,11 +242,13 @@ class NeonDataManager:
                     (practice.id, practice.date, practice.location)
                 )
             conn.commit()
+            logger.info(f"Practice added successfully: {practice.id}")
         finally:
-            conn.close()
+            self._release_connection(conn)
     
     def update_practice(self, practice_id: str, practice: Practice):
         """Update an existing practice."""
+        logger.info(f"Updating practice: {practice_id}")
         conn = self._get_connection()
         try:
             with conn.cursor() as cur:
@@ -190,34 +257,41 @@ class NeonDataManager:
                     (practice.date, practice.location, practice_id)
                 )
             conn.commit()
+            logger.info(f"Practice updated successfully: {practice_id}")
         finally:
-            conn.close()
+            self._release_connection(conn)
     
     def delete_practice(self, practice_id: str):
         """Delete a practice and associated touches."""
+        logger.info(f"Deleting practice: {practice_id}")
         conn = self._get_connection()
         try:
             with conn.cursor() as cur:
                 # Touches will be deleted automatically due to CASCADE
                 cur.execute("DELETE FROM practices WHERE id=%s", (practice_id,))
             conn.commit()
+            logger.info(f"Practice deleted successfully: {practice_id}")
         finally:
-            conn.close()
+            self._release_connection(conn)
     
     def get_practice_by_id(self, practice_id: str) -> Optional[Practice]:
         """Get practice by ID."""
+        logger.debug(f"Fetching practice by ID: {practice_id}")
         conn = self._get_connection()
         try:
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
                 cur.execute("SELECT * FROM practices WHERE id=%s", (practice_id,))
                 row = cur.fetchone()
-                return Practice(**dict(row)) if row else None
+                result = Practice(**dict(row)) if row else None
+                logger.debug(f"Practice {'found' if result else 'not found'}: {practice_id}")
+                return result
         finally:
-            conn.close()
+            self._release_connection(conn)
     
     # Touch methods
     def get_touches(self, practice_id: Optional[str] = None) -> List[Touch]:
         """Get all touches, optionally filtered by practice."""
+        logger.debug(f"Fetching touches{' for practice ' + practice_id if practice_id else ''}")
         conn = self._get_connection()
         try:
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
@@ -226,12 +300,14 @@ class NeonDataManager:
                 else:
                     cur.execute("SELECT * FROM touches")
                 rows = cur.fetchall()
+                logger.debug(f"Fetched {len(rows)} touches")
                 return [Touch(**dict(row)) for row in rows]
         finally:
-            conn.close()
+            self._release_connection(conn)
     
     def add_touch(self, touch: Touch):
         """Add a new touch."""
+        logger.info(f"Adding new touch: {touch.id} for practice {touch.practice_id}")
         conn = self._get_connection()
         try:
             with conn.cursor() as cur:
@@ -240,11 +316,13 @@ class NeonDataManager:
                     (touch.id, touch.practice_id, touch.method_id, touch.conductor_id, Json(touch.bells))
                 )
             conn.commit()
+            logger.info(f"Touch added successfully: {touch.id}")
         finally:
-            conn.close()
+            self._release_connection(conn)
     
     def update_touch(self, touch_id: str, touch: Touch):
         """Update an existing touch."""
+        logger.info(f"Updating touch: {touch_id}")
         conn = self._get_connection()
         try:
             with conn.cursor() as cur:
@@ -253,44 +331,53 @@ class NeonDataManager:
                     (touch.practice_id, touch.method_id, touch.conductor_id, Json(touch.bells), touch_id)
                 )
             conn.commit()
+            logger.info(f"Touch updated successfully: {touch_id}")
         finally:
-            conn.close()
+            self._release_connection(conn)
     
     def delete_touch(self, touch_id: str):
         """Delete a touch."""
+        logger.info(f"Deleting touch: {touch_id}")
         conn = self._get_connection()
         try:
             with conn.cursor() as cur:
                 cur.execute("DELETE FROM touches WHERE id=%s", (touch_id,))
             conn.commit()
+            logger.info(f"Touch deleted successfully: {touch_id}")
         finally:
-            conn.close()
+            self._release_connection(conn)
     
     def get_touch_by_id(self, touch_id: str) -> Optional[Touch]:
         """Get touch by ID."""
+        logger.debug(f"Fetching touch by ID: {touch_id}")
         conn = self._get_connection()
         try:
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
                 cur.execute("SELECT * FROM touches WHERE id=%s", (touch_id,))
                 row = cur.fetchone()
-                return Touch(**dict(row)) if row else None
+                result = Touch(**dict(row)) if row else None
+                logger.debug(f"Touch {'found' if result else 'not found'}: {touch_id}")
+                return result
         finally:
-            conn.close()
+            self._release_connection(conn)
     
     # Method methods
     def get_methods(self) -> List[Method]:
         """Get all workshop methods."""
+        logger.debug("Fetching all methods")
         conn = self._get_connection()
         try:
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
                 cur.execute("SELECT * FROM methods ORDER BY name")
                 rows = cur.fetchall()
+                logger.debug(f"Fetched {len(rows)} methods")
                 return [Method(**dict(row)) for row in rows]
         finally:
-            conn.close()
+            self._release_connection(conn)
     
     def add_method(self, method: Method):
         """Add a new method."""
+        logger.info(f"Adding new method: {method.name}")
         conn = self._get_connection()
         try:
             with conn.cursor() as cur:
@@ -299,11 +386,13 @@ class NeonDataManager:
                     (method.id, method.name, method.code)
                 )
             conn.commit()
+            logger.info(f"Method added successfully: {method.id}")
         finally:
-            conn.close()
+            self._release_connection(conn)
     
     def update_method(self, method_id: str, method: Method):
         """Update an existing method."""
+        logger.info(f"Updating method: {method_id}")
         conn = self._get_connection()
         try:
             with conn.cursor() as cur:
@@ -312,26 +401,32 @@ class NeonDataManager:
                     (method.name, method.code, method_id)
                 )
             conn.commit()
+            logger.info(f"Method updated successfully: {method_id}")
         finally:
-            conn.close()
+            self._release_connection(conn)
     
     def delete_method(self, method_id: str):
         """Delete a method."""
+        logger.info(f"Deleting method: {method_id}")
         conn = self._get_connection()
         try:
             with conn.cursor() as cur:
                 cur.execute("DELETE FROM methods WHERE id=%s", (method_id,))
             conn.commit()
+            logger.info(f"Method deleted successfully: {method_id}")
         finally:
-            conn.close()
+            self._release_connection(conn)
     
     def get_method_by_id(self, method_id: str) -> Optional[Method]:
         """Get method by ID."""
+        logger.debug(f"Fetching method by ID: {method_id}")
         conn = self._get_connection()
         try:
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
                 cur.execute("SELECT * FROM methods WHERE id=%s", (method_id,))
                 row = cur.fetchone()
-                return Method(**dict(row)) if row else None
+                result = Method(**dict(row)) if row else None
+                logger.debug(f"Method {'found' if result else 'not found'}: {method_id}")
+                return result
         finally:
-            conn.close()
+            self._release_connection(conn)

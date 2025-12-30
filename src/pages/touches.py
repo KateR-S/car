@@ -2,9 +2,19 @@
 
 import streamlit as st
 import uuid
-from src.data_manager import DataManager
+import logging
+from src.data_manager import (
+    DataManager, 
+    get_cached_touches,
+    get_cached_practices,
+    get_cached_employees,
+    get_cached_methods,
+    invalidate_data_cache
+)
 from src.models import Touch
 import config
+
+logger = logging.getLogger(__name__)
 
 
 def render_touches_page(data_manager: DataManager):
@@ -47,6 +57,7 @@ def render_touches_page(data_manager: DataManager):
 
 def render_touch_list(data_manager: DataManager):
     """Render list of touches with edit/delete options."""
+    logger.debug("Rendering touch list")
     # Add touch button at the top
     if st.button("➕ Add Touch", type="primary", use_container_width=False):
         st.session_state.editing_touch_id = None
@@ -55,10 +66,11 @@ def render_touch_list(data_manager: DataManager):
     
     st.markdown("---")
     
-    touches = data_manager.get_touches()
-    practices = {p.id: p for p in data_manager.get_practices()}
-    employees = {e.id: e for e in data_manager.get_employees()}
-    methods = {m.id: m for m in data_manager.get_methods()}
+    logger.debug("Fetching touches and related data")
+    touches = get_cached_touches(data_manager)
+    practices = {p.id: p for p in get_cached_practices(data_manager)}
+    employees = {e.id: e for e in get_cached_employees(data_manager)}
+    methods = {m.id: m for m in get_cached_methods(data_manager)}
     
     if not touches:
         st.info("No touches found. Click 'Add Touch' above to add your first touch.")
@@ -123,7 +135,9 @@ def render_touch_list(data_manager: DataManager):
                     if st.button("🗑️ Delete", key=f"delete_touch_{touch.id}"):
                         method = methods.get(touch.method_id)
                         method_name = method.name if method else "touch"
+                        logger.info(f"Deleting touch: {touch.id}")
                         data_manager.delete_touch(touch.id)
+                        invalidate_data_cache()  # Invalidate cache after deletion
                         st.success(f"Deleted touch: {method_name}")
                         st.rerun()
                 
@@ -149,9 +163,10 @@ def render_touch_form(data_manager: DataManager, editing_touch: Touch = None):
         data_manager: The data manager instance
         editing_touch: Touch object if editing, None if adding new
     """
-    practices = data_manager.get_practices()
-    employees = data_manager.get_employees()
-    methods = data_manager.get_methods()
+    logger.debug("Rendering touch form")
+    practices = get_cached_practices(data_manager)
+    employees = get_cached_employees(data_manager)
+    methods = get_cached_methods(data_manager)
     
     if not practices:
         st.warning("⚠️ Please create at least one practice before adding touches.")
@@ -336,6 +351,7 @@ def render_touch_form(data_manager: DataManager, editing_touch: Touch = None):
                 
                 if editing_touch:
                     # Update existing touch
+                    logger.info(f"Updating touch: {editing_touch.id}")
                     updated_touch = Touch(
                         id=editing_touch.id,
                         practice_id=practice_id,
@@ -344,9 +360,11 @@ def render_touch_form(data_manager: DataManager, editing_touch: Touch = None):
                         bells=bell_assignments
                     )
                     data_manager.update_touch(editing_touch.id, updated_touch)
+                    invalidate_data_cache()  # Invalidate cache after update
                     st.success("Touch updated successfully!")
                 else:
                     # Add new touch
+                    logger.info("Adding new touch")
                     new_touch = Touch(
                         id=str(uuid.uuid4()),
                         practice_id=practice_id,
@@ -355,6 +373,7 @@ def render_touch_form(data_manager: DataManager, editing_touch: Touch = None):
                         bells=bell_assignments
                     )
                     data_manager.add_touch(new_touch)
+                    invalidate_data_cache()  # Invalidate cache after addition
                     st.success("Touch added successfully!")
                 
                 # Reset editing state and return to list tab
