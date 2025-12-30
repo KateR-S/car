@@ -22,7 +22,7 @@ def check_password() -> bool:
     st.title("🔐 Attendance Tracking App")
     st.markdown("### Please log in to continue")
 
-    if config.DEFAULT_PASSWORD is None or config.DEFAULT_PASSWORD == "":
+    if config.DEFAULT_PASSWORD == "":
         st.error("Admin password not set. Please contact your administrator")
         return False
 
