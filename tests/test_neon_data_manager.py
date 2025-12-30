@@ -21,11 +21,12 @@ class TestNeonDataManager:
         }
         
         with patch.dict(os.environ, env_vars, clear=False):
-            with patch.object(NeonDataManager, '_ensure_tables'):
-                manager = NeonDataManager()
-                
-                expected = "postgresql://test_role:test_pass@test_name.eu-west-2.aws.neon.tech/test_db?sslmode=require&channel_binding=require"
-                assert manager.connection_string == expected
+            with patch.object(NeonDataManager, '_init_connection_pool'):
+                with patch.object(NeonDataManager, '_ensure_tables'):
+                    manager = NeonDataManager()
+                    
+                    expected = "postgresql://test_role:test_pass@test_name.eu-west-2.aws.neon.tech/test_db?sslmode=require&channel_binding=require"
+                    assert manager.connection_string == expected
     
     def test_build_connection_string_missing_env_vars(self):
         """Test that ValueError is raised when env vars are missing."""
@@ -40,7 +41,7 @@ class TestNeonDataManager:
             assert "DB_ROLE" in str(exc_info.value)
     
     def test_get_connection_success(self):
-        """Test successful database connection."""
+        """Test successful database connection from pool."""
         env_vars = {
             'DB_ROLE': 'test_role',
             'DB_PASS': 'test_pass',
@@ -49,20 +50,21 @@ class TestNeonDataManager:
         }
         
         with patch.dict(os.environ, env_vars, clear=False):
-            with patch.object(NeonDataManager, '_ensure_tables'):
-                manager = NeonDataManager()
-                
-                with patch('psycopg2.connect') as mock_connect:
+            with patch.object(NeonDataManager, '_init_connection_pool'):
+                with patch.object(NeonDataManager, '_ensure_tables'):
+                    manager = NeonDataManager()
+                    
                     mock_conn = Mock()
-                    mock_connect.return_value = mock_conn
+                    manager._connection_pool = Mock()
+                    manager._connection_pool.getconn.return_value = mock_conn
                     
                     conn = manager._get_connection()
                     
                     assert conn == mock_conn
-                    mock_connect.assert_called_once_with(manager.connection_string)
+                    manager._connection_pool.getconn.assert_called_once()
     
     def test_get_connection_failure(self):
-        """Test connection error handling."""
+        """Test connection error handling when pool fails."""
         env_vars = {
             'DB_ROLE': 'test_role',
             'DB_PASS': 'test_pass',
@@ -71,16 +73,17 @@ class TestNeonDataManager:
         }
         
         with patch.dict(os.environ, env_vars, clear=False):
-            with patch.object(NeonDataManager, '_ensure_tables'):
-                manager = NeonDataManager()
-                
-                with patch('psycopg2.connect') as mock_connect:
-                    mock_connect.side_effect = psycopg2.OperationalError("Connection failed")
+            with patch.object(NeonDataManager, '_init_connection_pool'):
+                with patch.object(NeonDataManager, '_ensure_tables'):
+                    manager = NeonDataManager()
+                    
+                    manager._connection_pool = Mock()
+                    manager._connection_pool.getconn.side_effect = psycopg2.OperationalError("Connection failed")
                     
                     with pytest.raises(ConnectionError) as exc_info:
                         manager._get_connection()
                     
-                    assert "Failed to connect to Neon database" in str(exc_info.value)
+                    assert "Failed to get connection from pool" in str(exc_info.value)
     
     def test_ensure_tables_creates_ringers_table(self):
         """Test that ensure_tables creates the ringers table."""
@@ -97,13 +100,15 @@ class TestNeonDataManager:
             mock_conn.cursor.return_value.__enter__ = Mock(return_value=mock_cursor)
             mock_conn.cursor.return_value.__exit__ = Mock(return_value=False)
             
-            with patch.object(NeonDataManager, '_get_connection', return_value=mock_conn):
-                manager = NeonDataManager()
-                
-                # Check that ringers table was created
-                calls = [str(call) for call in mock_cursor.execute.call_args_list]
-                ringers_table_created = any('CREATE TABLE IF NOT EXISTS ringers' in str(call) for call in calls)
-                assert ringers_table_created, "Ringers table should be created"
+            with patch.object(NeonDataManager, '_init_connection_pool'):
+                with patch.object(NeonDataManager, '_get_connection', return_value=mock_conn):
+                    with patch.object(NeonDataManager, '_release_connection'):
+                        manager = NeonDataManager()
+                        
+                        # Check that ringers table was created
+                        calls = [str(call) for call in mock_cursor.execute.call_args_list]
+                        ringers_table_created = any('CREATE TABLE IF NOT EXISTS ringers' in str(call) for call in calls)
+                        assert ringers_table_created, "Ringers table should be created"
     
     def test_get_employees_returns_list(self):
         """Test get_employees returns list of Employee objects."""
@@ -115,26 +120,29 @@ class TestNeonDataManager:
         }
         
         with patch.dict(os.environ, env_vars, clear=False):
-            with patch.object(NeonDataManager, '_ensure_tables'):
-                manager = NeonDataManager()
-                
-                mock_conn = Mock()
-                mock_cursor = Mock()
-                mock_cursor.fetchall.return_value = [
-                    {'id': '1', 'first_name': 'John', 'last_name': 'Doe', 'member': True, 'resident': 'Local'}
-                ]
-                
-                with patch.object(manager, '_get_connection', return_value=mock_conn):
-                    mock_conn.cursor.return_value.__enter__ = Mock(return_value=mock_cursor)
-                    mock_conn.cursor.return_value.__exit__ = Mock(return_value=False)
+            with patch.object(NeonDataManager, '_init_connection_pool'):
+                with patch.object(NeonDataManager, '_ensure_tables'):
+                    manager = NeonDataManager()
                     
-                    ringers = manager.get_employees()
+                    mock_conn = Mock()
+                    mock_cursor = Mock()
+                    mock_cursor.fetchall.return_value = [
+                        {'id': '1', 'first_name': 'John', 'last_name': 'Doe', 'member': True, 'resident': 'Local'}
+                    ]
                     
-                    assert len(ringers) == 1
-                    assert isinstance(ringers[0], Employee)
-                    assert ringers[0].first_name == 'John'
-                    mock_cursor.execute.assert_called_once()
-                    assert 'SELECT * FROM ringers' in mock_cursor.execute.call_args[0][0]
+                    with patch.object(manager, '_get_connection', return_value=mock_conn):
+                        with patch.object(manager, '_release_connection'):
+                            mock_conn.cursor.return_value.__enter__ = Mock(return_value=mock_cursor)
+                            mock_conn.cursor.return_value.__exit__ = Mock(return_value=False)
+                            
+                            ringers = manager.get_employees()
+                            
+                            assert len(ringers) == 1
+                            assert isinstance(ringers[0], Employee)
+                            assert ringers[0].first_name == 'John'
+                            mock_cursor.execute.assert_called_once()
+                            assert 'SELECT * FROM ringers' in mock_cursor.execute.call_args[0][0]
+                            manager._release_connection.assert_called_once_with(mock_conn)
     
     def test_add_employee(self):
         """Test adding a ringer."""
@@ -359,7 +367,7 @@ class TestNeonDataManager:
                 assert ringers_fk, "Foreign key should reference ringers table"
     
     def test_connection_cleanup_on_error(self):
-        """Test that connections are properly closed even on error."""
+        """Test that connections are properly released even on error."""
         env_vars = {
             'DB_ROLE': 'test_role',
             'DB_PASS': 'test_pass',
@@ -368,19 +376,21 @@ class TestNeonDataManager:
         }
         
         with patch.dict(os.environ, env_vars, clear=False):
-            with patch.object(NeonDataManager, '_ensure_tables'):
-                manager = NeonDataManager()
-                
-                mock_conn = Mock()
-                mock_cursor = Mock()
-                mock_cursor.execute.side_effect = Exception("Database error")
-                
-                with patch.object(manager, '_get_connection', return_value=mock_conn):
-                    mock_conn.cursor.return_value.__enter__ = Mock(return_value=mock_cursor)
-                    mock_conn.cursor.return_value.__exit__ = Mock(return_value=False)
+            with patch.object(NeonDataManager, '_init_connection_pool'):
+                with patch.object(NeonDataManager, '_ensure_tables'):
+                    manager = NeonDataManager()
                     
-                    with pytest.raises(Exception):
-                        manager.get_employees()
+                    mock_conn = Mock()
+                    mock_cursor = Mock()
+                    mock_cursor.execute.side_effect = Exception("Database error")
                     
-                    # Connection should still be closed
-                    mock_conn.close.assert_called_once()
+                    with patch.object(manager, '_get_connection', return_value=mock_conn):
+                        with patch.object(manager, '_release_connection') as mock_release:
+                            mock_conn.cursor.return_value.__enter__ = Mock(return_value=mock_cursor)
+                            mock_conn.cursor.return_value.__exit__ = Mock(return_value=False)
+                            
+                            with pytest.raises(Exception):
+                                manager.get_employees()
+                            
+                            # Connection should still be released
+                            mock_release.assert_called_once_with(mock_conn)

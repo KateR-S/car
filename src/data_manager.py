@@ -3,8 +3,19 @@
 import json
 import os
 from typing import Dict, List, Optional
-from src.models import Employee, Practice, Touch, Method
+import logging
 import config
+from src.models import Employee, Practice, Touch, Method
+
+# Import streamlit conditionally (for caching)
+try:
+    import streamlit as st
+    STREAMLIT_AVAILABLE = True
+except ImportError:
+    STREAMLIT_AVAILABLE = False
+
+# Configure logging
+logger = logging.getLogger(__name__)
 
 
 class DataManager:
@@ -198,10 +209,102 @@ def get_data_manager():
     
     Returns either a DataManager (JSON) or NeonDataManager (PostgreSQL) instance
     depending on the USE_NEON configuration setting.
+    
+    This function uses st.cache_resource when Streamlit is available to ensure
+    only one instance is created per session, which is crucial for connection pooling.
     """
     if config.USE_NEON:
         from src.neon_data_manager import NeonDataManager
-        return NeonDataManager()
+        
+        if STREAMLIT_AVAILABLE:
+            # Use st.cache_resource to ensure single instance with connection pooling
+            @st.cache_resource
+            def _get_neon_manager():
+                logger.info("Creating cached NeonDataManager instance")
+                return NeonDataManager()
+            
+            return _get_neon_manager()
+        else:
+            # For tests or non-Streamlit environments
+            logger.info("Creating NeonDataManager instance (no caching)")
+            return NeonDataManager()
     else:
+        # JSON data manager doesn't need caching as it has no persistent connections
+        logger.info("Creating DataManager instance")
         return DataManager()
+
+
+# Cache invalidation version - increment this when data changes
+if STREAMLIT_AVAILABLE and 'cache_version' not in st.session_state:
+    st.session_state.cache_version = 0
+
+
+def invalidate_data_cache():
+    """Invalidate all data caches by incrementing the cache version.
+    
+    Call this after any data mutation (add/update/delete operations).
+    """
+    if STREAMLIT_AVAILABLE:
+        st.session_state.cache_version += 1
+        logger.info(f"Data cache invalidated, new version: {st.session_state.cache_version}")
+
+
+def get_cache_version():
+    """Get the current cache version for use in cached functions."""
+    if STREAMLIT_AVAILABLE:
+        return st.session_state.get('cache_version', 0)
+    return 0
+
+
+# Cached data fetching functions
+def get_cached_employees(data_manager) -> List[Employee]:
+    """Get all employees with caching."""
+    if STREAMLIT_AVAILABLE:
+        @st.cache_data(ttl=config.CACHE_TTL_SECONDS)
+        def _fetch_employees(_manager, _version):
+            logger.debug("Fetching employees (cache miss)")
+            return _manager.get_employees()
+        
+        return _fetch_employees(data_manager, get_cache_version())
+    else:
+        return data_manager.get_employees()
+
+
+def get_cached_practices(data_manager) -> List[Practice]:
+    """Get all practices with caching."""
+    if STREAMLIT_AVAILABLE:
+        @st.cache_data(ttl=config.CACHE_TTL_SECONDS)
+        def _fetch_practices(_manager, _version):
+            logger.debug("Fetching practices (cache miss)")
+            return _manager.get_practices()
+        
+        return _fetch_practices(data_manager, get_cache_version())
+    else:
+        return data_manager.get_practices()
+
+
+def get_cached_touches(data_manager, practice_id: Optional[str] = None) -> List[Touch]:
+    """Get all touches with caching, optionally filtered by practice."""
+    if STREAMLIT_AVAILABLE:
+        @st.cache_data(ttl=config.CACHE_TTL_SECONDS)
+        def _fetch_touches(_manager, _practice_id, _version):
+            logger.debug(f"Fetching touches for practice {_practice_id} (cache miss)")
+            return _manager.get_touches(_practice_id)
+        
+        return _fetch_touches(data_manager, practice_id, get_cache_version())
+    else:
+        return data_manager.get_touches(practice_id)
+
+
+def get_cached_methods(data_manager) -> List[Method]:
+    """Get all methods with caching."""
+    if STREAMLIT_AVAILABLE:
+        @st.cache_data(ttl=config.CACHE_TTL_SECONDS)
+        def _fetch_methods(_manager, _version):
+            logger.debug("Fetching methods (cache miss)")
+            return _manager.get_methods()
+        
+        return _fetch_methods(data_manager, get_cache_version())
+    else:
+        return data_manager.get_methods()
 

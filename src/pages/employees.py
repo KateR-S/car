@@ -2,13 +2,17 @@
 
 import streamlit as st
 import uuid
-from src.data_manager import DataManager
+import logging
+from src.data_manager import DataManager, get_cached_employees, invalidate_data_cache
 from src.models import Employee
 import config
+
+logger = logging.getLogger(__name__)
 
 
 def render_employees_page(data_manager: DataManager):
     """Render the employees management page."""
+    logger.debug("Rendering employees page")
     st.title("Ringer Management")
     
     # Add employee button in popover
@@ -23,7 +27,8 @@ def render_employees_page(data_manager: DataManager):
 
 def render_employee_list(data_manager: DataManager):
     """Render list of ringers with edit/delete options."""
-    employees = data_manager.get_employees()
+    logger.debug("Fetching employees for list")
+    employees = get_cached_employees(data_manager)
     
     if not employees:
         st.info("No ringers found. Click 'Add Ringer' above to add your first ringer.")
@@ -48,7 +53,9 @@ def render_employee_list(data_manager: DataManager):
             
             with col3:
                 if st.button("🗑️ Delete", key=f"delete_{emp.id}"):
+                    logger.info(f"Deleting employee: {emp.id}")
                     data_manager.delete_employee(emp.id)
+                    invalidate_data_cache()  # Invalidate cache after deletion
                     st.success(f"Deleted {emp.full_name()}")
                     st.rerun()
             
@@ -109,6 +116,7 @@ def render_employee_form(data_manager: DataManager, editing_employee: Employee =
             else:
                 if editing_employee:
                     # Update existing employee
+                    logger.info(f"Updating employee: {editing_employee.id}")
                     updated_employee = Employee(
                         id=editing_employee.id,
                         first_name=first_name.strip(),
@@ -117,9 +125,11 @@ def render_employee_form(data_manager: DataManager, editing_employee: Employee =
                         resident=resident
                     )
                     data_manager.update_employee(editing_employee.id, updated_employee)
+                    invalidate_data_cache()  # Invalidate cache after update
                     st.success(f"Updated {updated_employee.full_name()}")
                 else:
                     # Add new employee
+                    logger.info("Adding new employee")
                     new_employee = Employee(
                         id=str(uuid.uuid4()),
                         first_name=first_name.strip(),
@@ -128,6 +138,7 @@ def render_employee_form(data_manager: DataManager, editing_employee: Employee =
                         resident=resident
                     )
                     data_manager.add_employee(new_employee)
+                    invalidate_data_cache()  # Invalidate cache after addition
                     st.success(f"Added {new_employee.full_name()}")
                 
                 st.rerun()

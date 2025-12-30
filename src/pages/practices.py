@@ -2,14 +2,18 @@
 
 import streamlit as st
 import uuid
+import logging
 from datetime import datetime
-from src.data_manager import DataManager
+from src.data_manager import DataManager, get_cached_practices, get_cached_touches, invalidate_data_cache
 from src.models import Practice
 import config
+
+logger = logging.getLogger(__name__)
 
 
 def render_practices_page(data_manager: DataManager):
     """Render the practices management page."""
+    logger.debug("Rendering practices page")
     st.title("Practice Management")
     
     # Add practice button in popover
@@ -24,7 +28,8 @@ def render_practices_page(data_manager: DataManager):
 
 def render_practice_list(data_manager: DataManager):
     """Render list of practices with edit/delete options."""
-    practices = data_manager.get_practices()
+    logger.debug("Fetching practices for list")
+    practices = get_cached_practices(data_manager)
     
     if not practices:
         st.info("No practices found. Click 'Add Practice' above to add your first practice.")
@@ -48,7 +53,7 @@ def render_practice_list(data_manager: DataManager):
                 st.caption(f"📍 Location: {practice.location}")
                 
                 # Show number of touches for this practice
-                touches = data_manager.get_touches(practice.id)
+                touches = get_cached_touches(data_manager, practice.id)
                 st.caption(f"🎯 {len(touches)} touch(es)")
             
             with col2:
@@ -59,10 +64,12 @@ def render_practice_list(data_manager: DataManager):
             with col3:
                 if st.button("🗑️ Delete", key=f"delete_practice_{practice.id}"):
                     # Check if there are associated touches
-                    touches = data_manager.get_touches(practice.id)
+                    touches = get_cached_touches(data_manager, practice.id)
                     if touches:
                         st.warning(f"This practice has {len(touches)} associated touch(es). They will also be deleted.")
+                    logger.info(f"Deleting practice: {practice.id}")
                     data_manager.delete_practice(practice.id)
+                    invalidate_data_cache()  # Invalidate cache after deletion
                     st.success(f"Deleted practice on {practice.date}")
                     st.rerun()
             
@@ -124,21 +131,25 @@ def render_practice_form(data_manager: DataManager, editing_practice: Practice =
             
             if editing_practice:
                 # Update existing practice
+                logger.info(f"Updating practice: {editing_practice.id}")
                 updated_practice = Practice(
                     id=editing_practice.id,
                     date=formatted_date,
                     location=location
                 )
                 data_manager.update_practice(editing_practice.id, updated_practice)
+                invalidate_data_cache()  # Invalidate cache after update
                 st.success(f"Updated practice on {formatted_date}")
             else:
                 # Add new practice
+                logger.info("Adding new practice")
                 new_practice = Practice(
                     id=str(uuid.uuid4()),
                     date=formatted_date,
                     location=location
                 )
                 data_manager.add_practice(new_practice)
+                invalidate_data_cache()  # Invalidate cache after addition
                 st.success(f"Added practice on {formatted_date}")
             
             st.rerun()

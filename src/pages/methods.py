@@ -2,12 +2,16 @@
 
 import streamlit as st
 import uuid
-from src.data_manager import DataManager
+import logging
+from src.data_manager import DataManager, get_cached_methods, invalidate_data_cache
 from src.models import Method
+
+logger = logging.getLogger(__name__)
 
 
 def render_methods_page(data_manager: DataManager):
     """Render the methods management page."""
+    logger.debug("Rendering methods page")
     st.title("📚 Method Management")
     
     # Add method button in popover
@@ -22,7 +26,8 @@ def render_methods_page(data_manager: DataManager):
 
 def render_method_list(data_manager: DataManager):
     """Render list of methods with edit/delete options."""
-    methods = data_manager.get_methods()
+    logger.debug("Fetching methods for list")
+    methods = get_cached_methods(data_manager)
     
     if not methods:
         st.info("No methods found. Click 'Add Method' above to add your first method.")
@@ -46,7 +51,9 @@ def render_method_list(data_manager: DataManager):
             
             with col3:
                 if st.button("🗑️ Delete", key=f"delete_{method.id}"):
+                    logger.info(f"Deleting method: {method.id}")
                     data_manager.delete_method(method.id)
+                    invalidate_data_cache()  # Invalidate cache after deletion
                     st.success(f"Deleted {method.name}")
                     st.rerun()
             
@@ -96,21 +103,25 @@ def render_method_form(data_manager: DataManager, editing_method: Method = None)
             else:
                 if editing_method:
                     # Update existing method
+                    logger.info(f"Updating method: {editing_method.id}")
                     updated_method = Method(
                         id=editing_method.id,
                         name=name.strip(),
                         code=code.strip()
                     )
                     data_manager.update_method(editing_method.id, updated_method)
+                    invalidate_data_cache()  # Invalidate cache after update
                     st.success(f"Updated {updated_method.name}")
                 else:
                     # Add new method
+                    logger.info("Adding new method")
                     new_method = Method(
                         id=str(uuid.uuid4()),
                         name=name.strip(),
                         code=code.strip()
                     )
                     data_manager.add_method(new_method)
+                    invalidate_data_cache()  # Invalidate cache after addition
                     st.success(f"Added {new_method.name}")
                 
                 st.rerun()
