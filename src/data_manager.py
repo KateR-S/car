@@ -4,8 +4,8 @@ import json
 import os
 from typing import Dict, List, Optional
 import logging
-from src.models import Employee, Practice, Touch, Method
 import config
+from src.models import Employee, Practice, Touch, Method
 
 # Import streamlit conditionally (for caching)
 try:
@@ -260,7 +260,6 @@ def get_cache_version():
 def get_cached_employees(data_manager) -> List[Employee]:
     """Get all employees with caching."""
     if STREAMLIT_AVAILABLE:
-        import config
         @st.cache_data(ttl=config.CACHE_TTL_SECONDS)
         def _fetch_employees(_manager, _version):
             logger.debug("Fetching employees (cache miss)")
@@ -274,7 +273,6 @@ def get_cached_employees(data_manager) -> List[Employee]:
 def get_cached_practices(data_manager) -> List[Practice]:
     """Get all practices with caching."""
     if STREAMLIT_AVAILABLE:
-        import config
         @st.cache_data(ttl=config.CACHE_TTL_SECONDS)
         def _fetch_practices(_manager, _version):
             logger.debug("Fetching practices (cache miss)")
@@ -288,7 +286,6 @@ def get_cached_practices(data_manager) -> List[Practice]:
 def get_cached_touches(data_manager, practice_id: Optional[str] = None) -> List[Touch]:
     """Get all touches with caching, optionally filtered by practice."""
     if STREAMLIT_AVAILABLE:
-        import config
         @st.cache_data(ttl=config.CACHE_TTL_SECONDS)
         def _fetch_touches(_manager, _practice_id, _version):
             logger.debug(f"Fetching touches for practice {_practice_id} (cache miss)")
@@ -302,7 +299,6 @@ def get_cached_touches(data_manager, practice_id: Optional[str] = None) -> List[
 def get_cached_methods(data_manager) -> List[Method]:
     """Get all methods with caching."""
     if STREAMLIT_AVAILABLE:
-        import config
         @st.cache_data(ttl=config.CACHE_TTL_SECONDS)
         def _fetch_methods(_manager, _version):
             logger.debug("Fetching methods (cache miss)")
