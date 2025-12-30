@@ -23,7 +23,7 @@ def check_password() -> bool:
     st.markdown("### Please log in to continue")
 
     if config.DEFAULT_PASSWORD == "":
-        st.error("Admin password not set. Please contact your administrator")
+        st.error("Admin password not set. Please set the ADMIN_PASS environment variable and try again.")
         return False
 
     password = st.text_input("Password", type="password", key="password_input")
