@@ -5,7 +5,7 @@
       "first_name": "John",
       "last_name": "Smith",
       "member": true,
-      "resident": "Local"
+      "resident": "Visitor"
     },
     {
       "id": "ffc7a9c0-2af2-41d3-9bac-e9a07bc20147",
@@ -48,6 +48,7 @@
       "id": "fa82294e-5354-484c-bbf0-bdc9ff6481e1",
       "practice_id": "b5b24bb6-a958-471f-97e8-b0faeeb22c56",
       "method_id": "79d73784-a08a-4752-877b-56b313824cd5",
+      "touch_number": 1,
       "conductor_id": "ffc7a9c0-2af2-41d3-9bac-e9a07bc20147",
       "bells": [
         "ffc7a9c0-2af2-41d3-9bac-e9a07bc20147",

@@ -134,7 +134,26 @@ class DataManager:
         touches = [Touch(**touch) for touch in data.get("touches", [])]
         if practice_id:
             touches = [touch for touch in touches if touch.practice_id == practice_id]
+        # Sort by touch_number
+        touches.sort(key=lambda t: t.touch_number)
         return touches
+    
+    def get_next_touch_number(self, practice_id: str) -> int:
+        """Get the next available touch number for a practice.
+        
+        Returns the smallest available number from 1 to MAX_TOUCHES_PER_PRACTICE.
+        If all slots are filled, returns MAX_TOUCHES_PER_PRACTICE + 1.
+        """
+        touches = self.get_touches(practice_id)
+        existing_numbers = {touch.touch_number for touch in touches}
+        
+        # Find the first available number
+        for i in range(1, config.MAX_TOUCHES_PER_PRACTICE + 1):
+            if i not in existing_numbers:
+                return i
+        
+        # All slots filled, return next number (will be over limit)
+        return config.MAX_TOUCHES_PER_PRACTICE + 1
     
     def add_touch(self, touch: Touch):
         """Add a new touch."""
