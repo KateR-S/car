@@ -8,6 +8,7 @@ from src.data_manager import (
     get_cached_employees,
     get_cached_practices,
     get_cached_touches,
+    get_cached_touches_by_date,
     get_cached_methods
 )
 from src.pages.employees import render_employees_page
