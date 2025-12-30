@@ -342,7 +342,7 @@ class TestNeonDataManager:
                         mock_conn.cursor.return_value.__enter__ = Mock(return_value=mock_cursor)
                         mock_conn.cursor.return_value.__exit__ = Mock(return_value=False)
                         
-                        touch = Touch(id='t1', practice_id='p1', method_id='m1', conductor_id='r1', bells=[None]*12)
+                        touch = Touch(id='t1', practice_id='p1', method_id='m1', touch_number=1, conductor_id='r1', bells=[None]*12)
                         manager.add_touch(touch)
                         
                         mock_cursor.execute.assert_called_once()

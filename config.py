@@ -6,7 +6,7 @@ import os
 DEFAULT_PASSWORD = os.environ.get("ADMIN_PASS", "")
 
 # Enums
-RESIDENT_TYPES = ["Local", "Term-time Only", "Vacation Only"]
+RESIDENT_TYPES = ["Local", "Term-time Only", "Vacation Only", "Visitor"]
 LOCATIONS = ["Withycombe Raleigh", "Cathedral"]
 
 # Data file path
