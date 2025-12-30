@@ -402,3 +402,81 @@ class TestNeonDataManager:
                             
                             # Connection should still be released
                             mock_release.assert_called_once_with(mock_conn)
+    
+    def test_get_next_touch_number_empty_practice(self):
+        """Test get_next_touch_number returns 1 for practice with no touches."""
+        env_vars = {
+            'DB_ROLE': 'test_role',
+            'DB_PASS': 'test_pass',
+            'DB_NAME': 'test_name',
+            'DB_DATABASE': 'test_db'
+        }
+        
+        with patch.dict(os.environ, env_vars, clear=False):
+            with patch.object(NeonDataManager, '_ensure_tables'):
+                manager = NeonDataManager()
+                
+                mock_conn = Mock()
+                mock_cursor = Mock()
+                mock_cursor.fetchall.return_value = []
+                
+                with patch.object(manager, '_get_connection', return_value=mock_conn):
+                    mock_conn.cursor.return_value.__enter__ = Mock(return_value=mock_cursor)
+                    mock_conn.cursor.return_value.__exit__ = Mock(return_value=False)
+                    
+                    next_number = manager.get_next_touch_number('p1')
+                    
+                    assert next_number == 1
+    
+    def test_get_next_touch_number_with_gaps(self):
+        """Test get_next_touch_number finds first gap in touch numbers."""
+        env_vars = {
+            'DB_ROLE': 'test_role',
+            'DB_PASS': 'test_pass',
+            'DB_NAME': 'test_name',
+            'DB_DATABASE': 'test_db'
+        }
+        
+        with patch.dict(os.environ, env_vars, clear=False):
+            with patch.object(NeonDataManager, '_ensure_tables'):
+                manager = NeonDataManager()
+                
+                mock_conn = Mock()
+                mock_cursor = Mock()
+                # Simulate touches with numbers 1, 2, 4 (gap at 3)
+                mock_cursor.fetchall.return_value = [
+                    {'touch_number': 1},
+                    {'touch_number': 2},
+                    {'touch_number': 4}
+                ]
+                
+                with patch.object(manager, '_get_connection', return_value=mock_conn):
+                    mock_conn.cursor.return_value.__enter__ = Mock(return_value=mock_cursor)
+                    mock_conn.cursor.return_value.__exit__ = Mock(return_value=False)
+                    
+                    next_number = manager.get_next_touch_number('p1')
+                    
+                    assert next_number == 3
+    
+    def test_touch_number_unique_constraint(self):
+        """Test that touches table has unique constraint on (practice_id, touch_number)."""
+        env_vars = {
+            'DB_ROLE': 'test_role',
+            'DB_PASS': 'test_pass',
+            'DB_NAME': 'test_name',
+            'DB_DATABASE': 'test_db'
+        }
+        
+        with patch.dict(os.environ, env_vars, clear=False):
+            mock_conn = Mock()
+            mock_cursor = Mock()
+            mock_conn.cursor.return_value.__enter__ = Mock(return_value=mock_cursor)
+            mock_conn.cursor.return_value.__exit__ = Mock(return_value=False)
+            
+            with patch.object(NeonDataManager, '_get_connection', return_value=mock_conn):
+                manager = NeonDataManager()
+                
+                # Check that unique constraint on practice_id and touch_number exists
+                calls = [str(call) for call in mock_cursor.execute.call_args_list]
+                unique_constraint = any('UNIQUE(practice_id, touch_number)' in str(call) for call in calls)
+                assert unique_constraint, "Unique constraint should exist on (practice_id, touch_number)"

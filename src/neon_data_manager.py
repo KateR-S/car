@@ -137,11 +137,13 @@ class NeonDataManager:
                         id VARCHAR(255) PRIMARY KEY,
                         practice_id VARCHAR(255) NOT NULL,
                         method_id VARCHAR(255) NOT NULL,
+                        touch_number INTEGER NOT NULL,
                         conductor_id VARCHAR(255),
                         bells JSONB NOT NULL,
                         FOREIGN KEY (practice_id) REFERENCES practices(id) ON DELETE CASCADE,
                         FOREIGN KEY (method_id) REFERENCES methods(id),
-                        FOREIGN KEY (conductor_id) REFERENCES ringers(id)
+                        FOREIGN KEY (conductor_id) REFERENCES ringers(id),
+                        UNIQUE(practice_id, touch_number)
                     )
                 """)
                 
@@ -299,12 +301,42 @@ class NeonDataManager:
         try:
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
                 if practice_id:
-                    cur.execute("SELECT * FROM touches WHERE practice_id=%s", (practice_id,))
+                    cur.execute("SELECT * FROM touches WHERE practice_id=%s ORDER BY touch_number", (practice_id,))
                 else:
-                    cur.execute("SELECT * FROM touches")
+                    cur.execute("SELECT * FROM touches ORDER BY practice_id, touch_number")
                 rows = cur.fetchall()
                 logger.debug(f"Fetched {len(rows)} touches")
                 return [Touch(**dict(row)) for row in rows]
+        finally:
+            self._release_connection(conn)
+    
+    def get_next_touch_number(self, practice_id: str) -> int:
+        """Get the next available touch number for a practice.
+        
+        Returns the smallest available number from 1 to MAX_TOUCHES_PER_PRACTICE.
+        If all slots are filled, returns MAX_TOUCHES_PER_PRACTICE + 1.
+        """
+        from config import MAX_TOUCHES_PER_PRACTICE
+        logger.debug(f"Getting next touch number for practice: {practice_id}")
+        conn = self._get_connection()
+        try:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute(
+                    "SELECT touch_number FROM touches WHERE practice_id=%s ORDER BY touch_number",
+                    (practice_id,)
+                )
+                rows = cur.fetchall()
+                existing_numbers = {row['touch_number'] for row in rows}
+                
+                # Find the first available number
+                for i in range(1, MAX_TOUCHES_PER_PRACTICE + 1):
+                    if i not in existing_numbers:
+                        logger.debug(f"Next available touch number: {i}")
+                        return i
+                
+                # All slots filled, return next number (will be over limit)
+                logger.debug(f"All touch slots filled, returning {MAX_TOUCHES_PER_PRACTICE + 1}")
+                return MAX_TOUCHES_PER_PRACTICE + 1
         finally:
             self._release_connection(conn)
     
@@ -315,8 +347,8 @@ class NeonDataManager:
         try:
             with conn.cursor() as cur:
                 cur.execute(
-                    "INSERT INTO touches (id, practice_id, method_id, conductor_id, bells) VALUES (%s, %s, %s, %s, %s::jsonb)",
-                    (touch.id, touch.practice_id, touch.method_id, touch.conductor_id, Json(touch.bells))
+                    "INSERT INTO touches (id, practice_id, method_id, touch_number, conductor_id, bells) VALUES (%s, %s, %s, %s, %s, %s::jsonb)",
+                    (touch.id, touch.practice_id, touch.method_id, touch.touch_number, touch.conductor_id, Json(touch.bells))
                 )
             conn.commit()
             logger.info(f"Touch added successfully: {touch.id}")
@@ -330,8 +362,8 @@ class NeonDataManager:
         try:
             with conn.cursor() as cur:
                 cur.execute(
-                    "UPDATE touches SET practice_id=%s, method_id=%s, conductor_id=%s, bells=%s::jsonb WHERE id=%s",
-                    (touch.practice_id, touch.method_id, touch.conductor_id, Json(touch.bells), touch_id)
+                    "UPDATE touches SET practice_id=%s, method_id=%s, touch_number=%s, conductor_id=%s, bells=%s::jsonb WHERE id=%s",
+                    (touch.practice_id, touch.method_id, touch.touch_number, touch.conductor_id, Json(touch.bells), touch_id)
                 )
             conn.commit()
             logger.info(f"Touch updated successfully: {touch_id}")

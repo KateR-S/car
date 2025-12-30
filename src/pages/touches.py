@@ -78,7 +78,7 @@ def render_touch_list(data_manager: DataManager):
     
     st.subheader(f"Total Touches: {len(touches)}")
     
-    # Sort touches by practice date (descending)
+    # Sort touches by practice date (descending) and touch_number
     touches_with_dates = []
     for touch in touches:
         practice = practices.get(touch.practice_id)
@@ -89,8 +89,8 @@ def render_touch_list(data_manager: DataManager):
                 sortable_date = f"{date_parts[2]}-{date_parts[1]}-{date_parts[0]}"  # YYYY-MM-DD
                 touches_with_dates.append((touch, sortable_date, practice))
     
-    # Sort by date descending
-    touches_with_dates.sort(key=lambda x: x[1], reverse=True)
+    # Sort by date descending, then by touch_number ascending
+    touches_with_dates.sort(key=lambda x: (x[1], x[0].touch_number), reverse=True)
     
     # Group by practice for display
     touches_by_practice = {}
@@ -99,6 +99,12 @@ def render_touch_list(data_manager: DataManager):
         if practice_id not in touches_by_practice:
             touches_by_practice[practice_id] = (practice, [])
         touches_by_practice[practice_id][1].append(touch)
+    
+    # Sort touches within each practice by touch_number
+    for practice_id in touches_by_practice:
+        practice, practice_touches = touches_by_practice[practice_id]
+        practice_touches.sort(key=lambda t: t.touch_number)
+        touches_by_practice[practice_id] = (practice, practice_touches)
     
     # Display touches grouped by practice (already sorted by date)
     for practice_id, (practice, practice_touches) in touches_by_practice.items():
@@ -114,7 +120,7 @@ def render_touch_list(data_manager: DataManager):
                 with col1:
                     method = methods.get(touch.method_id)
                     method_name = method.name if method else "(Unknown Method)"
-                    st.markdown(f"**🎯 {method_name}**")
+                    st.markdown(f"**Touch #{touch.touch_number}: {method_name}**")
                     
                     conductor = employees.get(touch.conductor_id) if touch.conductor_id else None
                     if conductor:
@@ -220,6 +226,22 @@ def render_touch_form(data_manager: DataManager, editing_touch: Touch = None):
             key=f"touch_practice_{editing_touch.id if editing_touch else 'new'}"
         )
         practice_id = practice_id_map[selected_practice]
+        
+        # Touch number input (auto-suggested but editable)
+        if editing_touch:
+            suggested_number = editing_touch.touch_number
+        else:
+            suggested_number = data_manager.get_next_touch_number(practice_id)
+        
+        touch_number = st.number_input(
+            "Touch Number *",
+            min_value=1,
+            max_value=config.MAX_TOUCHES_PER_PRACTICE,
+            value=suggested_number,
+            step=1,
+            key=f"touch_number_{editing_touch.id if editing_touch else 'new'}",
+            help=f"Touch order number (1 to {config.MAX_TOUCHES_PER_PRACTICE}). Must be unique per practice."
+        )
         
         # Method selection
         method_options = [f"{m.name} ({m.code})" for m in methods]
@@ -349,34 +371,43 @@ def render_touch_form(data_manager: DataManager, editing_touch: Touch = None):
                 conductor_bell_index = checked_conductors[0]
                 conductor_id = bell_assignments[conductor_bell_index]
                 
-                if editing_touch:
-                    # Update existing touch
-                    logger.info(f"Updating touch: {editing_touch.id}")
-                    updated_touch = Touch(
-                        id=editing_touch.id,
-                        practice_id=practice_id,
-                        method_id=method_id,
-                        conductor_id=conductor_id,
-                        bells=bell_assignments
-                    )
-                    data_manager.update_touch(editing_touch.id, updated_touch)
-                    invalidate_data_cache()  # Invalidate cache after update
-                    st.success("Touch updated successfully!")
-                else:
-                    # Add new touch
-                    logger.info("Adding new touch")
-                    new_touch = Touch(
-                        id=str(uuid.uuid4()),
-                        practice_id=practice_id,
-                        method_id=method_id,
-                        conductor_id=conductor_id,
-                        bells=bell_assignments
-                    )
-                    data_manager.add_touch(new_touch)
-                    invalidate_data_cache()  # Invalidate cache after addition
-                    st.success("Touch added successfully!")
+                # Validate touch_number uniqueness
+                existing_touches = data_manager.get_touches(practice_id)
+                touch_numbers_in_use = {t.touch_number for t in existing_touches if t.id != (editing_touch.id if editing_touch else None)}
                 
-                # Reset editing state and return to list tab
-                st.session_state.editing_touch_id = None
-                st.session_state.touch_tab = 0  # Return to list tab
-                st.rerun()
+                if touch_number in touch_numbers_in_use:
+                    st.error(f"Touch number {touch_number} is already used in this practice. Please choose a different number.")
+                else:
+                    if editing_touch:
+                        # Update existing touch
+                        logger.info(f"Updating touch: {editing_touch.id}")
+                        updated_touch = Touch(
+                            id=editing_touch.id,
+                            practice_id=practice_id,
+                            method_id=method_id,
+                            touch_number=touch_number,
+                            conductor_id=conductor_id,
+                            bells=bell_assignments
+                        )
+                        data_manager.update_touch(editing_touch.id, updated_touch)
+                        invalidate_data_cache()  # Invalidate cache after update
+                        st.success("Touch updated successfully!")
+                    else:
+                        # Add new touch
+                        logger.info("Adding new touch")
+                        new_touch = Touch(
+                            id=str(uuid.uuid4()),
+                            practice_id=practice_id,
+                            method_id=method_id,
+                            touch_number=touch_number,
+                            conductor_id=conductor_id,
+                            bells=bell_assignments
+                        )
+                        data_manager.add_touch(new_touch)
+                        invalidate_data_cache()  # Invalidate cache after addition
+                        st.success("Touch added successfully!")
+                    
+                    # Reset editing state and return to list tab
+                    st.session_state.editing_touch_id = None
+                    st.session_state.touch_tab = 0  # Return to list tab
+                    st.rerun()

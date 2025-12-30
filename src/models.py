@@ -53,6 +53,7 @@ class Touch:
     id: str
     practice_id: str
     method_id: str  # Method ID (was method name)
+    touch_number: int  # Touch order number (1 to MAX_TOUCHES_PER_PRACTICE), unique per practice
     conductor_id: Optional[str] = None  # Employee ID
     bells: List[Optional[str]] = field(default_factory=lambda: [None] * 12)  # Employee IDs for each bell
     
