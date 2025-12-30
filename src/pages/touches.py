@@ -139,7 +139,7 @@ def render_touch_list(data_manager: DataManager):
     touches_by_practice = {}
     for touch in touches:
         practice = practices_dict.get(touch.practice_id)
-        if practice and practice.date == selected_date:
+        if practice:
             if touch.practice_id not in touches_by_practice:
                 touches_by_practice[touch.practice_id] = (practice, [])
             touches_by_practice[touch.practice_id][1].append(touch)
