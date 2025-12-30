@@ -17,11 +17,16 @@ def check_password() -> bool:
     # If already authenticated, return True
     if st.session_state.authenticated:
         return True
-    
+
     # Show login form
     st.title("🔐 Attendance Tracking App")
     st.markdown("### Please log in to continue")
-    
+
+    if config.DEFAULT_PASSWORD is None or config.DEFAULT_PASSWORD == "":
+        st.error("Admin password not set. Please contact your administrator")
+        st.session_state.authenticated = False
+        return False
+
     password = st.text_input("Password", type="password", key="password_input")
     
     col1, col2, _ = st.columns([1, 1, 3])
@@ -37,9 +42,6 @@ def check_password() -> bool:
         if st.button("Clear"):
             st.session_state.password_input = ""
             st.rerun()
-    
-    st.markdown("---")
-    st.info(f"💡 **Note**: Default password is `{config.DEFAULT_PASSWORD}`")
     
     return False
 

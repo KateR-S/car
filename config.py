@@ -3,7 +3,7 @@
 import os
 
 # Authentication
-DEFAULT_PASSWORD = "admin123"
+DEFAULT_PASSWORD = os.environ.get("ADMIN_PASS","")
 
 # Enums
 RESIDENT_TYPES = ["Local", "Term-time Only", "Vacation Only"]
