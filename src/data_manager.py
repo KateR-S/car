@@ -260,7 +260,8 @@ def get_cache_version():
 def get_cached_employees(data_manager) -> List[Employee]:
     """Get all employees with caching."""
     if STREAMLIT_AVAILABLE:
-        @st.cache_data(ttl=300)  # 5 minute TTL
+        import config
+        @st.cache_data(ttl=config.CACHE_TTL_SECONDS)
         def _fetch_employees(_manager, _version):
             logger.debug("Fetching employees (cache miss)")
             return _manager.get_employees()
@@ -273,7 +274,8 @@ def get_cached_employees(data_manager) -> List[Employee]:
 def get_cached_practices(data_manager) -> List[Practice]:
     """Get all practices with caching."""
     if STREAMLIT_AVAILABLE:
-        @st.cache_data(ttl=300)  # 5 minute TTL
+        import config
+        @st.cache_data(ttl=config.CACHE_TTL_SECONDS)
         def _fetch_practices(_manager, _version):
             logger.debug("Fetching practices (cache miss)")
             return _manager.get_practices()
@@ -286,7 +288,8 @@ def get_cached_practices(data_manager) -> List[Practice]:
 def get_cached_touches(data_manager, practice_id: Optional[str] = None) -> List[Touch]:
     """Get all touches with caching, optionally filtered by practice."""
     if STREAMLIT_AVAILABLE:
-        @st.cache_data(ttl=300)  # 5 minute TTL
+        import config
+        @st.cache_data(ttl=config.CACHE_TTL_SECONDS)
         def _fetch_touches(_manager, _practice_id, _version):
             logger.debug(f"Fetching touches for practice {_practice_id} (cache miss)")
             return _manager.get_touches(_practice_id)
@@ -299,7 +302,8 @@ def get_cached_touches(data_manager, practice_id: Optional[str] = None) -> List[
 def get_cached_methods(data_manager) -> List[Method]:
     """Get all methods with caching."""
     if STREAMLIT_AVAILABLE:
-        @st.cache_data(ttl=300)  # 5 minute TTL
+        import config
+        @st.cache_data(ttl=config.CACHE_TTL_SECONDS)
         def _fetch_methods(_manager, _version):
             logger.debug("Fetching methods (cache miss)")
             return _manager.get_methods()

@@ -49,10 +49,13 @@ class NeonDataManager:
     def _init_connection_pool(self):
         """Initialize the connection pool."""
         try:
-            logger.info("Creating connection pool (min=1, max=5)")
+            import config
+            min_conn = config.DB_POOL_MIN_CONNECTIONS
+            max_conn = config.DB_POOL_MAX_CONNECTIONS
+            logger.info(f"Creating connection pool (min={min_conn}, max={max_conn})")
             self._connection_pool = pool.SimpleConnectionPool(
-                1,  # minimum connections
-                5,  # maximum connections
+                min_conn,
+                max_conn,
                 self.connection_string
             )
             logger.info("Connection pool created successfully")
