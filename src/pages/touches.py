@@ -78,7 +78,7 @@ def render_touch_list(data_manager: DataManager):
     
     st.subheader(f"Total Touches: {len(touches)}")
     
-    # Sort touches by practice date (descending) and touch_number
+    # Sort touches by practice date (descending) and touch_number (ascending)
     touches_with_dates = []
     for touch in touches:
         practice = practices.get(touch.practice_id)
@@ -89,8 +89,10 @@ def render_touch_list(data_manager: DataManager):
                 sortable_date = f"{date_parts[2]}-{date_parts[1]}-{date_parts[0]}"  # YYYY-MM-DD
                 touches_with_dates.append((touch, sortable_date, practice))
     
-    # Sort by date descending, then by touch_number ascending
-    touches_with_dates.sort(key=lambda x: (x[1], x[0].touch_number), reverse=True)
+    # Sort by date descending (reverse the date), then by touch_number ascending
+    # We sort in multiple stages: first by date desc, then by touch_number asc within each practice
+    touches_with_dates.sort(key=lambda x: x[0].touch_number)  # First sort by touch_number ascending
+    touches_with_dates.sort(key=lambda x: x[1], reverse=True)  # Then sort by date descending (stable sort preserves touch_number order)
     
     # Group by practice for display
     touches_by_practice = {}
@@ -100,13 +102,7 @@ def render_touch_list(data_manager: DataManager):
             touches_by_practice[practice_id] = (practice, [])
         touches_by_practice[practice_id][1].append(touch)
     
-    # Sort touches within each practice by touch_number
-    for practice_id in touches_by_practice:
-        practice, practice_touches = touches_by_practice[practice_id]
-        practice_touches.sort(key=lambda t: t.touch_number)
-        touches_by_practice[practice_id] = (practice, practice_touches)
-    
-    # Display touches grouped by practice (already sorted by date)
+    # Display touches grouped by practice (already sorted by date and touch_number)
     for practice_id, (practice, practice_touches) in touches_by_practice.items():
         if practice:
             st.markdown(f"### 📅 Practice: {practice.date} - {practice.location}")
