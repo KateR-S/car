@@ -379,10 +379,13 @@ def render_touch_form(data_manager: DataManager, editing_touch: Touch = None):
                 duplicate_ringers = {emp_id: bells for emp_id, bells in assigned_ringers.items() if len(bells) > 1}
                 
                 if duplicate_ringers:
+                    # Create employee lookup map for O(1) access
+                    employee_map = {e.id: e for e in employees}
+                    
                     # Build error message with ringer names and bell numbers
                     error_messages = []
                     for emp_id, bells in duplicate_ringers.items():
-                        ringer = next((e for e in employees if e.id == emp_id), None)
+                        ringer = employee_map.get(emp_id)
                         ringer_name = ringer.full_name() if ringer else "Unknown"
                         bell_list = ", ".join(str(b) for b in bells)
                         error_messages.append(f"{ringer_name} is assigned to bells {bell_list}")
@@ -393,9 +396,13 @@ def render_touch_form(data_manager: DataManager, editing_touch: Touch = None):
                         "\n".join(f"• {msg}" for msg in error_messages) +
                         "\n\nChange previous selections if you want to assign a ringer to a different bell."
                     )
-                # Validate touch_number uniqueness
-                elif touch_number in [t.touch_number for t in data_manager.get_touches(practice_id) if t.id != (editing_touch.id if editing_touch else None)]:
-                    st.error(f"Touch number {touch_number} is already used in this practice. Please choose a different number.")
+                else:
+                    # Validate touch_number uniqueness
+                    existing_touches = data_manager.get_touches(practice_id)
+                    touch_numbers_in_use = {t.touch_number for t in existing_touches if t.id != (editing_touch.id if editing_touch else None)}
+                    
+                    if touch_number in touch_numbers_in_use:
+                        st.error(f"Touch number {touch_number} is already used in this practice. Please choose a different number.")
                 else:
                     if editing_touch:
                         # Update existing touch
