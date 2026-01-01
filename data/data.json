@@ -1,60 +1,46 @@
 {
+  "practices": [
+    {
+      "id": "e85b8243-2df4-4d78-92d8-1eec241c1332",
+      "date": "01-01-2026",
+      "location": "Withycombe Raleigh"
+    }
+  ],
   "employees": [
     {
-      "id": "66619add-2367-4307-98db-5649075fec92",
+      "id": "a4624a56-c91a-4d7a-9e8a-de0dc3921921",
       "first_name": "John",
-      "last_name": "Smith",
-      "member": true,
-      "resident": "Visitor"
-    },
-    {
-      "id": "ffc7a9c0-2af2-41d3-9bac-e9a07bc20147",
-      "first_name": "Jane",
       "last_name": "Doe",
-      "member": true,
+      "member": false,
       "resident": "Local"
     },
     {
-      "id": "9d6cef67-84c0-40a6-9bd0-710656b3d58b",
-      "first_name": "Here",
-      "last_name": "Student",
-      "member": true,
-      "resident": "Term-time Only"
+      "id": "27441595-d8e3-4a47-a69b-809a11cfad5e",
+      "first_name": "Jane",
+      "last_name": "Smith",
+      "member": false,
+      "resident": "Local"
     },
     {
-      "id": "48df557f-ad80-4b02-b752-b77bb7554abf",
-      "first_name": "Away",
-      "last_name": "Student",
-      "member": true,
-      "resident": "Vacation Only"
-    },
-    {
-      "id": "5eee824d-03f5-40f7-b760-eb414c100e56",
-      "first_name": "Prospective",
-      "last_name": "Member",
+      "id": "347c0543-c562-4822-880e-62ee995cd7d3",
+      "first_name": "Bob",
+      "last_name": "Johnson",
       "member": false,
       "resident": "Local"
     }
   ],
-  "practices": [
-    {
-      "id": "b5b24bb6-a958-471f-97e8-b0faeeb22c56",
-      "date": "29-12-2025",
-      "location": "Withycombe Raleigh"
-    }
-  ],
   "touches": [
     {
-      "id": "fa82294e-5354-484c-bbf0-bdc9ff6481e1",
-      "practice_id": "b5b24bb6-a958-471f-97e8-b0faeeb22c56",
-      "method_id": "79d73784-a08a-4752-877b-56b313824cd5",
+      "id": "a93a761f-0894-45af-bc48-09bd29de0535",
+      "practice_id": "e85b8243-2df4-4d78-92d8-1eec241c1332",
+      "method_id": "c13ad77e-2a06-4a1e-acbe-8fb25d161353",
       "touch_number": 1,
-      "conductor_id": "ffc7a9c0-2af2-41d3-9bac-e9a07bc20147",
+      "conductor_id": "a4624a56-c91a-4d7a-9e8a-de0dc3921921",
       "bells": [
-        "ffc7a9c0-2af2-41d3-9bac-e9a07bc20147",
-        "66619add-2367-4307-98db-5649075fec92",
-        "9d6cef67-84c0-40a6-9bd0-710656b3d58b",
-        "48df557f-ad80-4b02-b752-b77bb7554abf",
+        "a4624a56-c91a-4d7a-9e8a-de0dc3921921",
+        "27441595-d8e3-4a47-a69b-809a11cfad5e",
+        "347c0543-c562-4822-880e-62ee995cd7d3",
+        null,
         null,
         null,
         null,
@@ -68,9 +54,9 @@
   ],
   "methods": [
     {
-      "id": "79d73784-a08a-4752-877b-56b313824cd5",
-      "name": "Cambridge Surprise Maximus",
-      "code": "C12"
+      "id": "c13ad77e-2a06-4a1e-acbe-8fb25d161353",
+      "name": "Test Method",
+      "code": "TM"
     }
   ]
 }
