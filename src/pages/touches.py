@@ -403,37 +403,37 @@ def render_touch_form(data_manager: DataManager, editing_touch: Touch = None):
                     
                     if touch_number in touch_numbers_in_use:
                         st.error(f"Touch number {touch_number} is already used in this practice. Please choose a different number.")
-                else:
-                    if editing_touch:
-                        # Update existing touch
-                        logger.info(f"Updating touch: {editing_touch.id}")
-                        updated_touch = Touch(
-                            id=editing_touch.id,
-                            practice_id=practice_id,
-                            method_id=method_id,
-                            touch_number=touch_number,
-                            conductor_id=conductor_id,
-                            bells=bell_assignments
-                        )
-                        data_manager.update_touch(editing_touch.id, updated_touch)
-                        invalidate_data_cache()  # Invalidate cache after update
-                        st.success("Touch updated successfully!")
                     else:
-                        # Add new touch
-                        logger.info("Adding new touch")
-                        new_touch = Touch(
-                            id=str(uuid.uuid4()),
-                            practice_id=practice_id,
-                            method_id=method_id,
-                            touch_number=touch_number,
-                            conductor_id=conductor_id,
-                            bells=bell_assignments
-                        )
-                        data_manager.add_touch(new_touch)
-                        invalidate_data_cache()  # Invalidate cache after addition
-                        st.success("Touch added successfully!")
-                    
-                    # Reset editing state and return to list tab
-                    st.session_state.editing_touch_id = None
-                    st.session_state.touch_tab = 0  # Return to list tab
-                    st.rerun()
+                        if editing_touch:
+                            # Update existing touch
+                            logger.info(f"Updating touch: {editing_touch.id}")
+                            updated_touch = Touch(
+                                id=editing_touch.id,
+                                practice_id=practice_id,
+                                method_id=method_id,
+                                touch_number=touch_number,
+                                conductor_id=conductor_id,
+                                bells=bell_assignments
+                            )
+                            data_manager.update_touch(editing_touch.id, updated_touch)
+                            invalidate_data_cache()  # Invalidate cache after update
+                            st.success("Touch updated successfully!")
+                        else:
+                            # Add new touch
+                            logger.info("Adding new touch")
+                            new_touch = Touch(
+                                id=str(uuid.uuid4()),
+                                practice_id=practice_id,
+                                method_id=method_id,
+                                touch_number=touch_number,
+                                conductor_id=conductor_id,
+                                bells=bell_assignments
+                            )
+                            data_manager.add_touch(new_touch)
+                            invalidate_data_cache()  # Invalidate cache after addition
+                            st.success("Touch added successfully!")
+                        
+                        # Reset editing state and return to list tab
+                        st.session_state.editing_touch_id = None
+                        st.session_state.touch_tab = 0  # Return to list tab
+                        st.rerun()
