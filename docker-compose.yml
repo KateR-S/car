@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    ports:
+      - "8501:8501"
+    environment:
+      # Admin authentication
+      - ADMIN_PASS=${ADMIN_PASS}
+      
+      # Database backend selection
+      # Set to 'true' to use Neon, 'false' or leave empty to use JSON file
+      - USE_NEON=${USE_NEON:-false}
+      
+      # Neon Database Configuration (only needed if USE_NEON=true)
+      - DB_ROLE=${DB_ROLE}
+      - DB_PASS=${DB_PASS}
+      - DB_NAME=${DB_NAME}
+      - DB_DATABASE=${DB_DATABASE}
+      
+      # Optional: Database connection pool settings
+      - DB_POOL_MIN=${DB_POOL_MIN:-1}
+      - DB_POOL_MAX=${DB_POOL_MAX:-5}
+      
+      # Optional: Cache settings
+      - CACHE_TTL=${CACHE_TTL:-300}
+    
+    volumes:
+      # Mount data directory for JSON file persistence (used when USE_NEON=false)
+      - ./data:/app/data
+    
+    restart: unless-stopped
