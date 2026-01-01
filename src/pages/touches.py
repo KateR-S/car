@@ -3,7 +3,6 @@
 import streamlit as st
 import uuid
 import logging
-from datetime import datetime
 from src.data_manager import (
     DataManager, 
     get_cached_touches,
@@ -61,12 +60,6 @@ def render_touch_list(data_manager: DataManager):
     """Render list of touches with edit/delete options."""
     logger.debug("Rendering touch list")
     
-    # Initialize session state for date filter
-    if 'touch_filter_date' not in st.session_state:
-        # Default to today's date in DD-MM-YYYY format
-        today = datetime.now()
-        st.session_state.touch_filter_date = today.strftime("%d-%m-%Y")
-    
     # Add touch button at the top
     if st.button("➕ Add Touch", type="primary", use_container_width=False):
         st.session_state.editing_touch_id = None
@@ -103,10 +96,19 @@ def render_touch_list(data_manager: DataManager):
         st.info("No practices found. Please create a practice first.")
         return
     
-    # Find the index of the current filter date, or default to today or first available
+    # Initialize session state for date filter - default to latest date in database
+    if 'touch_filter_date' not in st.session_state:
+        # Default to the latest date (first in sorted list)
+        st.session_state.touch_filter_date = date_options[0]
+    
+    # Find the index of the current filter date, or default to latest date
     selected_index = 0
     if st.session_state.touch_filter_date in date_options:
         selected_index = date_options.index(st.session_state.touch_filter_date)
+    else:
+        # If current date is not in options (e.g., practice was deleted), reset to latest
+        st.session_state.touch_filter_date = date_options[0]
+        selected_index = 0
     
     # Date filter dropdown
     selected_date = st.selectbox(
