@@ -96,19 +96,26 @@ def render_touch_list(data_manager: DataManager):
         st.info("No practices found. Please create a practice first.")
         return
     
-    # Initialize session state for date filter - default to latest date in database
-    if 'touch_filter_date' not in st.session_state:
-        # Default to the latest date (first in sorted list)
-        st.session_state.touch_filter_date = date_options[0]
+    # Initialize session state for date filter
+    latest_date = date_options[0]  # First in sorted list is the most recent
     
-    # Find the index of the current filter date, or default to latest date
-    selected_index = 0
-    if st.session_state.touch_filter_date in date_options:
-        selected_index = date_options.index(st.session_state.touch_filter_date)
-    else:
-        # If current date is not in options (e.g., practice was deleted), reset to latest
-        st.session_state.touch_filter_date = date_options[0]
-        selected_index = 0
+    # Check if we need to initialize or update the filter date
+    if 'touch_filter_date' not in st.session_state:
+        # First time - set to latest date
+        st.session_state.touch_filter_date = latest_date
+        st.session_state.touch_filter_date_user_selected = False
+    elif st.session_state.touch_filter_date not in date_options:
+        # Stored date no longer exists (practice was deleted), reset to latest
+        st.session_state.touch_filter_date = latest_date
+        st.session_state.touch_filter_date_user_selected = False
+    elif not st.session_state.get('touch_filter_date_user_selected', False):
+        # User hasn't explicitly selected a date yet, so update to latest if it changed
+        # This handles the case where a new practice is added
+        if st.session_state.touch_filter_date != latest_date:
+            st.session_state.touch_filter_date = latest_date
+    
+    # Find the index of the current filter date
+    selected_index = date_options.index(st.session_state.touch_filter_date)
     
     # Date filter dropdown
     selected_date = st.selectbox(
@@ -118,9 +125,10 @@ def render_touch_list(data_manager: DataManager):
         key="date_filter_dropdown"
     )
     
-    # Update session state if date changed
+    # Update session state if date changed (user explicitly selected a different date)
     if selected_date != st.session_state.touch_filter_date:
         st.session_state.touch_filter_date = selected_date
+        st.session_state.touch_filter_date_user_selected = True  # Mark as user-selected
         st.rerun()
     
     st.markdown("---")
