@@ -257,7 +257,7 @@ def render_touch_form(data_manager: DataManager, editing_touch: Touch = None):
         employee_id_map[f"{e.full_name()}"] = e.id
     
     # Form
-    with st.form(form_key, clear_on_submit=True):
+    with st.form(form_key, clear_on_submit=False):
         # Practice selection
         practice_options = [f"{p.date} - {p.location}" for p in practices]
         practice_id_map = {}
@@ -427,43 +427,73 @@ def render_touch_form(data_manager: DataManager, editing_touch: Touch = None):
                 conductor_bell_index = checked_conductors[0]
                 conductor_id = bell_assignments[conductor_bell_index]
                 
-                # Validate touch_number uniqueness
-                existing_touches = data_manager.get_touches(practice_id)
-                touch_numbers_in_use = {t.touch_number for t in existing_touches if t.id != (editing_touch.id if editing_touch else None)}
+                # Validate ringer uniqueness - a ringer should only be assigned once per touch
+                assigned_ringers = {}  # Map employee_id -> list of bell numbers
+                for i, employee_id in enumerate(bell_assignments):
+                    if employee_id is not None:  # Only check non-empty bells
+                        if employee_id not in assigned_ringers:
+                            assigned_ringers[employee_id] = []
+                        assigned_ringers[employee_id].append(i + 1)  # Store 1-indexed bell numbers
                 
-                if touch_number in touch_numbers_in_use:
-                    st.error(f"Touch number {touch_number} is already used in this practice. Please choose a different number.")
-                else:
-                    if editing_touch:
-                        # Update existing touch
-                        logger.info(f"Updating touch: {editing_touch.id}")
-                        updated_touch = Touch(
-                            id=editing_touch.id,
-                            practice_id=practice_id,
-                            method_id=method_id,
-                            touch_number=touch_number,
-                            conductor_id=conductor_id,
-                            bells=bell_assignments
-                        )
-                        data_manager.update_touch(editing_touch.id, updated_touch)
-                        invalidate_data_cache()  # Invalidate cache after update
-                        st.success("Touch updated successfully!")
-                    else:
-                        # Add new touch
-                        logger.info("Adding new touch")
-                        new_touch = Touch(
-                            id=str(uuid.uuid4()),
-                            practice_id=practice_id,
-                            method_id=method_id,
-                            touch_number=touch_number,
-                            conductor_id=conductor_id,
-                            bells=bell_assignments
-                        )
-                        data_manager.add_touch(new_touch)
-                        invalidate_data_cache()  # Invalidate cache after addition
-                        st.success("Touch added successfully!")
+                # Check for duplicates
+                duplicate_ringers = {emp_id: bells for emp_id, bells in assigned_ringers.items() if len(bells) > 1}
+                
+                if duplicate_ringers:
+                    # Create employee lookup map for O(1) access
+                    employee_map = {e.id: e for e in employees}
                     
-                    # Reset editing state and return to list tab
-                    st.session_state.editing_touch_id = None
-                    st.session_state.touch_tab = 0  # Return to list tab
-                    st.rerun()
+                    # Build error message with ringer names and bell numbers
+                    error_messages = []
+                    for emp_id, bells in duplicate_ringers.items():
+                        ringer = employee_map.get(emp_id)
+                        ringer_name = ringer.full_name() if ringer else "Unknown"
+                        bell_list = ", ".join(str(b) for b in bells)
+                        error_messages.append(f"{ringer_name} is assigned to bells {bell_list}")
+                    
+                    st.error(
+                        f"Each ringer can only be assigned to one bell per touch. "
+                        f"Please remove duplicate assignments:\n\n" +
+                        "\n".join(f"• {msg}" for msg in error_messages) +
+                        "\n\nChange previous selections if you want to assign a ringer to a different bell."
+                    )
+                else:
+                    # Validate touch_number uniqueness
+                    existing_touches = data_manager.get_touches(practice_id)
+                    touch_numbers_in_use = {t.touch_number for t in existing_touches if t.id != (editing_touch.id if editing_touch else None)}
+                    
+                    if touch_number in touch_numbers_in_use:
+                        st.error(f"Touch number {touch_number} is already used in this practice. Please choose a different number.")
+                    else:
+                        if editing_touch:
+                            # Update existing touch
+                            logger.info(f"Updating touch: {editing_touch.id}")
+                            updated_touch = Touch(
+                                id=editing_touch.id,
+                                practice_id=practice_id,
+                                method_id=method_id,
+                                touch_number=touch_number,
+                                conductor_id=conductor_id,
+                                bells=bell_assignments
+                            )
+                            data_manager.update_touch(editing_touch.id, updated_touch)
+                            invalidate_data_cache()  # Invalidate cache after update
+                            st.success("Touch updated successfully!")
+                        else:
+                            # Add new touch
+                            logger.info("Adding new touch")
+                            new_touch = Touch(
+                                id=str(uuid.uuid4()),
+                                practice_id=practice_id,
+                                method_id=method_id,
+                                touch_number=touch_number,
+                                conductor_id=conductor_id,
+                                bells=bell_assignments
+                            )
+                            data_manager.add_touch(new_touch)
+                            invalidate_data_cache()  # Invalidate cache after addition
+                            st.success("Touch added successfully!")
+                        
+                        # Reset editing state and return to list tab
+                        st.session_state.editing_touch_id = None
+                        st.session_state.touch_tab = 0  # Return to list tab
+                        st.rerun()
