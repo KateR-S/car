@@ -197,7 +197,7 @@ def render_touch_form(data_manager: DataManager, editing_touch: Touch = None):
         employee_id_map[f"{e.full_name()}"] = e.id
     
     # Form
-    with st.form(form_key, clear_on_submit=True):
+    with st.form(form_key, clear_on_submit=False):
         # Practice selection
         practice_options = [f"{p.date} - {p.location}" for p in practices]
         practice_id_map = {}
