@@ -6,6 +6,8 @@ import logging
 from src.data_manager import (
     DataManager, 
     get_cached_touches,
+    get_cached_touches_by_date,
+    get_cached_touches_by_date,
     get_cached_practices,
     get_cached_employees,
     get_cached_methods,
@@ -58,6 +60,7 @@ def render_touches_page(data_manager: DataManager):
 def render_touch_list(data_manager: DataManager):
     """Render list of touches with edit/delete options."""
     logger.debug("Rendering touch list")
+    
     # Add touch button at the top
     if st.button("➕ Add Touch", type="primary", use_container_width=False):
         st.session_state.editing_touch_id = None
@@ -66,43 +69,100 @@ def render_touch_list(data_manager: DataManager):
     
     st.markdown("---")
     
-    logger.debug("Fetching touches and related data")
-    touches = get_cached_touches(data_manager)
-    practices = {p.id: p for p in get_cached_practices(data_manager)}
+    # Date filter section
+    st.subheader("Filter by Date")
+    
+    # Get unique dates from practices
+    logger.debug("Fetching practices for date filter")
+    practices = get_cached_practices(data_manager)
+    logger.debug(f"Practices for date filter: {practices}")
+    
+    # Create a list of dates and map to sortable format
+    date_options = []
+    date_map = {}  # Maps display format to DD-MM-YYYY format
+    
+    for practice in practices:
+        date_str = practice.date  # DD-MM-YYYY format
+        if date_str not in date_map.values():
+            # Convert to sortable format for ordering
+            date_parts = date_str.split('-')
+            if len(date_parts) == 3:
+                sortable_date = f"{date_parts[2]}-{date_parts[1]}-{date_parts[0]}"  # YYYY-MM-DD
+                date_map[sortable_date] = date_str
+    
+    # Sort dates in descending order (most recent first)
+    sorted_dates = sorted(date_map.keys(), reverse=True)
+    date_options = [date_map[sd] for sd in sorted_dates]
+    
+    if not date_options:
+        st.info("No practices found. Please create a practice first.")
+        return
+    
+    # Initialize session state for date filter
+    latest_date = date_options[0]  # First in sorted list is the most recent
+    
+    # # Check if we need to initialize or update the filter date
+    if 'touch_filter_date' not in st.session_state:
+        # First time - set to latest date
+        st.session_state.touch_filter_date = latest_date
+        st.session_state.touch_filter_date_user_selected = False
+    elif st.session_state.touch_filter_date not in date_options:
+        # Stored date no longer exists (practice was deleted), reset to latest
+        st.session_state.touch_filter_date = latest_date
+        st.session_state.touch_filter_date_user_selected = False
+    elif not st.session_state.get('touch_filter_date_user_selected', False):
+        # User hasn't explicitly selected a date yet, so update to latest if it changed
+        # This handles the case where a new practice is added
+        if st.session_state.touch_filter_date != latest_date:
+            st.session_state.touch_filter_date = latest_date
+    
+    # Find the index of the current filter date
+    selected_index = date_options.index(st.session_state.touch_filter_date)
+    
+    # Date filter dropdown
+    selected_date = st.selectbox(
+        "Select Date",
+        options=date_options,
+        index=selected_index,
+        key="date_filter_dropdown"
+    )
+    
+    # Update session state if date changed (user explicitly selected a different date)
+    if selected_date != st.session_state.touch_filter_date:
+        st.session_state.touch_filter_date = selected_date
+        st.session_state.touch_filter_date_user_selected = True  # Mark as user-selected
+        st.rerun()
+    
+    st.markdown("---")
+    
+    logger.debug(f"Fetching touches for date: {selected_date}")
+    touches = get_cached_touches_by_date(data_manager, selected_date)
+    practices_dict = {p.id: p for p in practices}
     employees = {e.id: e for e in get_cached_employees(data_manager)}
     methods = {m.id: m for m in get_cached_methods(data_manager)}
     
     if not touches:
-        st.info("No touches found. Click 'Add Touch' above to add your first touch.")
+        st.info(f"No touches found for {selected_date}. Click 'Add Touch' above to add a touch for this date.")
         return
     
-    st.subheader(f"Total Touches: {len(touches)}")
-    
-    # Sort touches by practice date (descending) and touch_number (ascending)
-    touches_with_dates = []
-    for touch in touches:
-        practice = practices.get(touch.practice_id)
-        if practice:
-            # Convert date string (DD-MM-YYYY) to sortable format
-            date_parts = practice.date.split('-')
-            if len(date_parts) == 3:
-                sortable_date = f"{date_parts[2]}-{date_parts[1]}-{date_parts[0]}"  # YYYY-MM-DD
-                touches_with_dates.append((touch, sortable_date, practice))
-    
-    # Sort by date descending (reverse the date), then by touch_number ascending
-    # We sort in multiple stages: first by date desc, then by touch_number asc within each practice
-    touches_with_dates.sort(key=lambda x: x[0].touch_number)  # First sort by touch_number ascending
-    touches_with_dates.sort(key=lambda x: x[1], reverse=True)  # Then sort by date descending (stable sort preserves touch_number order)
+    st.subheader(f"Touches for {selected_date}: {len(touches)}")
     
     # Group by practice for display
     touches_by_practice = {}
-    for touch, sortable_date, practice in touches_with_dates:
-        practice_id = touch.practice_id
-        if practice_id not in touches_by_practice:
-            touches_by_practice[practice_id] = (practice, [])
-        touches_by_practice[practice_id][1].append(touch)
+    for touch in touches:
+        practice = practices_dict.get(touch.practice_id)
+        if practice:
+            if touch.practice_id not in touches_by_practice:
+                touches_by_practice[touch.practice_id] = (practice, [])
+            touches_by_practice[touch.practice_id][1].append(touch)
     
-    # Display touches grouped by practice (already sorted by date and touch_number)
+    # Sort touches within each practice by touch_number
+    for practice_id in touches_by_practice:
+        practice, practice_touches = touches_by_practice[practice_id]
+        practice_touches.sort(key=lambda t: t.touch_number)
+        touches_by_practice[practice_id] = (practice, practice_touches)
+    
+    # Display touches grouped by practice
     for practice_id, (practice, practice_touches) in touches_by_practice.items():
         if practice:
             st.markdown(f"### 📅 Practice: {practice.date} - {practice.location}")

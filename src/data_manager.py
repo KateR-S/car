@@ -138,6 +138,25 @@ class DataManager:
         touches.sort(key=lambda t: t.touch_number)
         return touches
     
+    def get_touches_by_date(self, date: str) -> List[Touch]:
+        """Get all touches for practices on a specific date.
+        
+        Args:
+            date: Date in DD-MM-YYYY format (e.g., "30-12-2025")
+        
+        Returns:
+            List of touches for practices on the specified date
+        """
+        data = self._load_data()
+        # Get practices for the specified date
+        practice_ids = {p["id"] for p in data.get("practices", []) if p.get("date") == date}
+        # Filter touches by practice_id
+        touches = [Touch(**touch) for touch in data.get("touches", []) 
+                  if touch["practice_id"] in practice_ids]
+        # Sort by touch_number
+        touches.sort(key=lambda t: t.touch_number)
+        return touches
+    
     def get_next_touch_number(self, practice_id: str) -> int:
         """Get the next available touch number for a practice.
         
@@ -313,6 +332,29 @@ def get_cached_touches(data_manager, practice_id: Optional[str] = None) -> List[
         return _fetch_touches(data_manager, practice_id, get_cache_version())
     else:
         return data_manager.get_touches(practice_id)
+
+
+def get_cached_touches_by_date(data_manager, date: str) -> List[Touch]:
+    """Get all touches for a specific date with caching.
+    
+    Args:
+        data_manager: The data manager instance
+        date: Date in DD-MM-YYYY format (e.g., "30-12-2025")
+    
+    Returns:
+        List of touches for practices on the specified date
+    """
+    logger.debug("Getting cached touches")
+    logger.debug(f"STREAMLIT_AVAILABLE: {STREAMLIT_AVAILABLE}")
+    if STREAMLIT_AVAILABLE:
+        @st.cache_data(ttl=config.CACHE_TTL_SECONDS)
+        def _fetch_touches_by_date(_manager, date, version):
+            logger.debug(f"Fetching touches for date {date} (cache miss)")
+            return _manager.get_touches_by_date(date)
+        
+        return _fetch_touches_by_date(data_manager, date, get_cache_version())
+    else:
+        return data_manager.get_touches_by_date(date)
 
 
 def get_cached_methods(data_manager) -> List[Method]:
