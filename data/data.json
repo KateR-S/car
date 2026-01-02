@@ -1,8 +1,13 @@
 {
   "practices": [
     {
-      "id": "e85b8243-2df4-4d78-92d8-1eec241c1332",
-      "date": "01-01-2026",
+      "id": "b5b24bb6-a958-471f-97e8-b0faeeb22c56",
+      "date": "29-12-2025",
+      "location": "Withycombe Raleigh"
+    },
+    {
+      "id": "c0ede55c-1a4b-4f52-8da8-72fb90410cd7",
+      "date": "31-12-2025",
       "location": "Withycombe Raleigh"
     }
   ],
@@ -27,6 +32,13 @@
       "last_name": "Johnson",
       "member": false,
       "resident": "Local"
+    },
+    {
+      "id": "0abe7918-4546-4489-8f67-eb5a8dd58ee8",
+      "first_name": "Bill",
+      "last_name": "Bligh",
+      "member": false,
+      "resident": "Visitor"
     }
   ],
   "touches": [

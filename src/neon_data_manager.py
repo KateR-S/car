@@ -310,6 +310,32 @@ class NeonDataManager:
         finally:
             self._release_connection(conn)
     
+    def get_touches_by_date(self, date: str) -> List[Touch]:
+        """Get all touches for practices on a specific date.
+        
+        Args:
+            date: Date in DD-MM-YYYY format (e.g., "30-12-2025")
+        
+        Returns:
+            List of touches for practices on the specified date
+        """
+        logger.debug(f"Fetching touches for date: {date}")
+        conn = self._get_connection()
+        try:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                # Join touches with practices to filter by date
+                cur.execute("""
+                    SELECT t.* FROM touches t
+                    INNER JOIN practices p ON t.practice_id = p.id
+                    WHERE p.date = %s
+                    ORDER BY t.touch_number
+                """, (date,))
+                rows = cur.fetchall()
+                logger.debug(f"Fetched {len(rows)} touches for date {date}. {rows}")
+                return [Touch(**dict(row)) for row in rows]
+        finally:
+            self._release_connection(conn)
+    
     def get_next_touch_number(self, practice_id: str) -> int:
         """Get the next available touch number for a practice.
         
