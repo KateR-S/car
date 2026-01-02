@@ -331,7 +331,7 @@ class NeonDataManager:
                     ORDER BY t.touch_number
                 """, (date,))
                 rows = cur.fetchall()
-                logger.debug(f"Fetched {len(rows)} touches for date {date}")
+                logger.debug(f"Fetched {len(rows)} touches for date {date}. {rows}")
                 return [Touch(**dict(row)) for row in rows]
         finally:
             self._release_connection(conn)

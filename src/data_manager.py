@@ -344,11 +344,13 @@ def get_cached_touches_by_date(data_manager, date: str) -> List[Touch]:
     Returns:
         List of touches for practices on the specified date
     """
+    logger.debug("Getting cached touches")
+    logger.debug(f"STREAMLIT_AVAILABLE: {STREAMLIT_AVAILABLE}")
     if STREAMLIT_AVAILABLE:
         @st.cache_data(ttl=config.CACHE_TTL_SECONDS)
-        def _fetch_touches_by_date(_manager, _date, version):
-            logger.debug(f"Fetching touches for date {_date} (cache miss)")
-            return _manager.get_touches_by_date(_date)
+        def _fetch_touches_by_date(_manager, date, version):
+            logger.debug(f"Fetching touches for date {date} (cache miss)")
+            return _manager.get_touches_by_date(date)
         
         return _fetch_touches_by_date(data_manager, date, get_cache_version())
     else:
